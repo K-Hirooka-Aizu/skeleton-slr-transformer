@@ -1,6 +1,7 @@
 import os
 import json
 
+import torch
 from torch.utils.data import Dataset
 from sklearn.preprocessing import OneHotEncoder, LabelEncoder
 
@@ -10,6 +11,7 @@ from utils.sampling_func import (
     sequential_sampling, 
     k_copies_fixed_length_sequential_sampling
 )
+from augmentation_tools import augment_skeleton
 
 class Sign_Dataset(Dataset):
     def __init__(self, index_file_path, split, pose_root, sample_strategy='rnd_start', num_samples=25, num_copies=4, img_transforms=None, video_transforms=None, test_index_file=None,skeleton_augmentation=True):
@@ -55,8 +57,8 @@ class Sign_Dataset(Dataset):
         if self.skeleton_augmentation:
             x = torch.from_numpy(augment_skeleton(x.numpy()))
         
+        # y = torch.Tensor(gloss_cat).to(torch.int64)
         y = gloss_cat
-        
         return x, y
 
     def _make_dataset(self, index_file_path, split):
@@ -135,7 +137,7 @@ class Sign_Dataset(Dataset):
 
         return poses_across_time
 
-    def _compute_difference(x):
+    def _compute_difference(self,x):
         diff = []
         for i, xx in enumerate(x):
             temp = []
@@ -145,7 +147,7 @@ class Sign_Dataset(Dataset):
             diff.append(temp)
         return diff
 
-    def _read_pose_file(filepath):
+    def _read_pose_file(self,filepath):
         body_pose_exclude = {9, 10, 11, 22, 23, 24, 12, 13, 14, 19, 20, 21}
 
         try:
@@ -161,7 +163,7 @@ class Sign_Dataset(Dataset):
         save_to = os.path.join('./features', vid)
 
         try:
-            ft = torch.load(os.path.join(save_to, frame_id + '_ft.pt'))
+            ft = torch.load(os.path.join(save_to, frame_id + '_ft.pt'),weights_only=False)
             xy = ft[:, :2]
             return xy
 
