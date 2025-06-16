@@ -1,4 +1,5 @@
 defaults:
+ - _self_
  - data: wlasl100
  - model: transformer_default
 
@@ -6,6 +7,7 @@ epochs: 500
 batch_size: 16
 label_smooting: 0.05
 accum_iter: 16
+gradient_clip: 10.0
 
 optim_type: adamw
 optim_args:

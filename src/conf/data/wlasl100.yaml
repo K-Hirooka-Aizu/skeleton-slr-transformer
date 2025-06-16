@@ -9,4 +9,4 @@ sampling_strategy:
     train: rnd_start
     valid: k_copies
     test: k_copies
-data_augmentation: true
+train_data_augmentation: true
