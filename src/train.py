@@ -1,27 +1,22 @@
+import os
 import random
 
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
-
+import torchmetrics
 import lightning as L
+from lightning.pytorch.callbacks import ModelCheckpoint
 from lightning.pytorch.loggers import TensorBoardLogger
+from pytorch_lightning.utilities.seed import seed_everything
 from pl_bolts.optimizers.lr_scheduler import LinearWarmupCosineAnnealingLR
 import hydra
-from omegaconf import DictConfig, OmegaConf
-from timm.scheduler import (
-    StepLRScheduler,
-    MultiStepLRScheduler,
-    CosineLRScheduler,
-)
-from timm.utils.metrics import (
-    AverageMeter,
-    accuracy,
-)
+from omegaconf import DictConfig
+
 
 # My library
-from dataloader import build_dataloader
+from datamodule import WLASLOpenposeLightningDataModule
 from models import build_model
 
 class LightningModel(L.LightningModule):
@@ -43,7 +38,16 @@ class LightningModel(L.LightningModule):
         self.warmup_epoch = cfg.scheduler_args.warmup_epoch
         self.warmup_lr_init = cfg.scheduler_args.warmup_lr_init
 
-        self.topk = cfg.topk
+        self.topk = sorted(cfg.topk)
+
+        self.train_metrics = torchmetrics.MetricCollection(
+            {
+                f"accuracy@{str(k).zfill(2)}": torchmetrics.classification.Accuracy(task="multiclass", num_classes=cfg.data.num_classes, top_k=k) for k in self.topk
+            },
+            prefix="train_",
+        )
+        self.valid_metrics = self.train_metrics.clone(prefix="valid_")
+        self.test_metrics = self.train_metrics.clone(prefix="test_")
     
     def forward(self,x):
         return self.model(x)
@@ -61,13 +65,15 @@ class LightningModel(L.LightningModule):
         pred = self.model(data)
         loss = self.loss_fn(pred,label)
 
-        topk_acc = accuracy(pred, label.argmax(dim=-1) if label.dim()==2 else label, self.topk)
+        self.log("train_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
 
-        self.log("train loss", loss, on_step=False, on_epoch=True, prog_bar=True, logger=True)
-        for top,acc in zip(self.topk, topk_acc):
-            self.log(f"train acc(@{top})", acc, on_step=False, on_epoch=True, prog_bar=True, logger=True)
-        
-        return {"loss":loss}
+        batch_value = self.train_metrics(pred, label.argmax(dim=-1) if label.dim() != 1 else label)
+        self.log_dict(batch_value,logger=True,on_epoch=True)
+
+        return loss
+
+    def on_train_epoch_end(self):
+        self.train_metrics.reset()
     
     def validation_step(self, batch, batch_idx):
         data, label = batch
@@ -87,11 +93,15 @@ class LightningModel(L.LightningModule):
             pred = self.model(data)
 
         loss = self.loss_fn(pred, label)
-        topk_acc = accuracy(pred, label, self.topk)
+        self.log("valid_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
 
-        self.log("valid loss",loss, on_step=False, on_epoch=True, prog_bar=True, logger=True)
-        for top, acc in zip(self.topk, topk_acc):
-            self.log(f"valid acc(@{top})", acc, on_step=False, on_epoch=True, prog_bar=True, logger=True)
+        self.valid_metrics.update(pred, label.argmax(dim=-1) if label.dim() != 1 else label)
+
+        return loss
+
+    def on_validation_epoch_end(self):
+        self.log_dict(self.valid_metrics.compute(),logger=True,on_epoch=True)
+        self.valid_metrics.reset()
     
     def test_step(self, batch, batch_idx):
         data, label = batch
@@ -111,11 +121,13 @@ class LightningModel(L.LightningModule):
             pred = self.model(data)
 
         loss = self.loss_fn(pred,label)
-        topk_acc = accuracy(pred, label, self.topk)
+        self.log("test_loss",loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
 
-        self.log("test loss",loss, on_step=False, on_epoch=True, prog_bar=True, logger=True)
-        for top, acc in zip(self.topk, topk_acc):
-            self.log(f"test acc(@{top})", acc, on_step=False, on_epoch=True, prog_bar=True, logger=True)
+        self.test_metrics.update(pred, label.argmax(dim=-1) if label.dim() != 1 else label)
+    
+    def on_test_epoch_end(self):
+        self.log_dict(self.test_metrics.compute(),logger=True,on_epoch=True)
+        self.test_metrics.reset()
 
 def fix_seed(seed):
     # random
@@ -131,14 +143,45 @@ def fix_seed(seed):
 @hydra.main(version_base=None, config_path="conf", config_name="default")
 def train(cfg : DictConfig) -> None:
     fix_seed(cfg.seed)
+    seed_everything(seed=cfg.seed, workers=True)
 
-    dataloaders = build_dataloader(cfg)
+    output_dir = hydra.core.hydra_config.HydraConfig.get().runtime.output_dir
+
+    datamodule = WLASLOpenposeLightningDataModule(
+        subset=cfg.data.subset,
+        seq_len=cfg.data.seq_len,
+        num_copies=cfg.data.num_copies,
+        sampling_strategy=cfg.data.sampling_strategy,
+        train_data_augmentation=cfg.data.train_data_augmentation,
+        batch_size=cfg.batch_size,
+        pin_memory=cfg.pin_memory,
+        num_workers=cfg.num_workers
+    )
     model = build_model(cfg)
-
     model = LightningModel(model,cfg)
-    logger = TensorBoardLogger(hydra.core.hydra_config.HydraConfig.get().runtime.output_dir, name="my_model")
-    trainer = L.Trainer(max_epochs=cfg.epochs,accumulate_grad_batches=cfg.accum_iter, precision='bf16-mixed', logger=logger)
-    trainer.fit(model=model, train_dataloaders=dataloaders["train"],val_dataloaders=dataloaders["valid"])
+
+    logger = TensorBoardLogger(output_dir, name=cfg.model.model_name)
+    checkpoint_callback = ModelCheckpoint(
+        dirpath=f"../models/{cfg.model.model_name}",
+        filename="{epoch}-{valid_loss:.4f}-{valid_accuracy@01:.4f}",
+        monitor="valid_accuracy@01",
+        mode="max",
+    )
+    trainer = L.Trainer(
+        max_epochs=cfg.epochs,
+        accumulate_grad_batches=cfg.accum_iter,
+        gradient_clip_val=cfg.gradient_clip,
+        precision='bf16-mixed', 
+        logger=logger,
+        callbacks=[
+            checkpoint_callback,
+        ],
+        deterministic=True,
+        )
+    trainer.fit(model=model, datamodule=datamodule)
+    model = LightningModel.load_from_checkpoint(checkpoint_callback.best_model_path, model=build_model(cfg), cfg=cfg)
+    trainer.validate(model=model,datamodule=datamodule)
+    trainer.test(datamodule=datamodule)
 
 
 if __name__=="__main__":
