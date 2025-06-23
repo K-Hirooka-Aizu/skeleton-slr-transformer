@@ -353,7 +353,8 @@ class WLASL_Dataset(Dataset):
             body = np.concatenate([body,np.mean(body[:,5:7],axis=1,keepdims=True),np.mean(body[:,11:13],axis=1,keepdims=True)],axis=1)
             body = body[:,selected_kps_for_body]
             
-            data = np.concatenate([body,face,lhand,rhand],axis=1) # 13 + 68 +21 + 21 = 123
+            # data = np.concatenate([body,face,lhand,rhand],axis=1) # 13 + 68 +21 + 21 = 123
+            data = np.concatenate([body,lhand,rhand],axis=1) # 13 +21 + 21 = 13 + 42 = 55
             # for i in range(len(data)):
             #     data[i] = data[i] - data[i,11]
             

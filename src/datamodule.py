@@ -11,6 +11,34 @@ from dataset import (
 )
 from augmentation_tools import JointMixAug
 
+def build_lightning_data_module(cfg):
+    dataset_name = cfg.data.dataset
+
+    if dataset_name == "wlasl":
+        return WLASLOpenposeLightningDataModule(
+            subset=cfg.data.subset,
+            seq_len=cfg.data.seq_len,
+            num_copies=cfg.data.num_copies,
+            sampling_strategy=cfg.data.sampling_strategy,
+            train_data_augmentation=cfg.data.train_data_augmentation,
+            batch_size=cfg.batch_size,
+            pin_memory=cfg.pin_memory,
+            num_workers=cfg.num_workers
+        )
+    elif dataset_name == "wlasl_mmpose":
+        return WLASLMMPoseLightningDataModule(
+            subset=cfg.data.subset,
+            seq_len=cfg.data.seq_len,
+            num_copies=cfg.data.num_copies,
+            sampling_strategy=cfg.data.sampling_strategy,
+            train_data_augmentation=cfg.data.train_data_augmentation,
+            batch_size=cfg.batch_size,
+            pin_memory=cfg.pin_memory,
+            num_workers=cfg.num_workers
+        )
+    else:
+        raise RuntimeError(f"Dataset [{dataset_name}] is not implemented.")
+
 class WLASLOpenposeLightningDataModule(L.LightningDataModule):
     def __init__(self,subset:str, seq_len:int=50, num_copies:int=4, sampling_strategy:dict[str,str]={"train":"rnd_start"}, train_data_augmentation:bool=False, batch_size:int=16, pin_memory:bool=False, num_workers:int=4):
         super().__init__()
