@@ -16,11 +16,11 @@ from omegaconf import DictConfig
 
 
 # My library
-from datamodule import WLASLOpenposeLightningDataModule
+from datamodule import build_lightning_data_module
 from models import build_model
 
 class LightningModel(L.LightningModule):
-    def __init__(self,model,cfg):
+    def __init__(self,model:nn.Module,cfg:DictConfig):
         super().__init__()
         self.model = model
 
@@ -147,20 +147,12 @@ def train(cfg : DictConfig) -> None:
 
     output_dir = hydra.core.hydra_config.HydraConfig.get().runtime.output_dir
 
-    datamodule = WLASLOpenposeLightningDataModule(
-        subset=cfg.data.subset,
-        seq_len=cfg.data.seq_len,
-        num_copies=cfg.data.num_copies,
-        sampling_strategy=cfg.data.sampling_strategy,
-        train_data_augmentation=cfg.data.train_data_augmentation,
-        batch_size=cfg.batch_size,
-        pin_memory=cfg.pin_memory,
-        num_workers=cfg.num_workers
-    )
+    datamodule = build_lightning_data_module(cfg)
+    
     model = build_model(cfg)
     model = LightningModel(model,cfg)
 
-    logger = TensorBoardLogger(output_dir, name=cfg.model.model_name)
+    logger = TensorBoardLogger(output_dir, name=f"{cfg.model.model_name}__{cfg.data.dataset}")
     checkpoint_callback = ModelCheckpoint(
         dirpath=f"../models/{cfg.model.model_name}",
         filename="{epoch}-{valid_loss:.4f}-{valid_accuracy@01:.4f}",
@@ -181,7 +173,7 @@ def train(cfg : DictConfig) -> None:
     trainer.fit(model=model, datamodule=datamodule)
     model = LightningModel.load_from_checkpoint(checkpoint_callback.best_model_path, model=build_model(cfg), cfg=cfg)
     trainer.validate(model=model,datamodule=datamodule)
-    trainer.test(datamodule=datamodule)
+    trainer.test(ckpt_path='best',datamodule=datamodule)
 
 
 if __name__=="__main__":
