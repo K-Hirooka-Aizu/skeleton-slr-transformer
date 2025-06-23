@@ -1,9 +1,9 @@
-dataset: wlasl
+dataset: wlasl_mmpose
 subset: asl100
 num_classes: 100
 in_channels: 2
 seq_len: 50
-n_joints: 123
+n_joints: 55
 num_copies: 4
 sampling_strategy:
     train: rnd_start
