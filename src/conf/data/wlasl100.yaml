@@ -1,4 +1,4 @@
-dataset: wlasl
+dataset: wlasl100
 subset: asl100
 num_classes: 100
 in_channels: 2

@@ -14,7 +14,7 @@ from augmentation_tools import JointMixAug
 def build_lightning_data_module(cfg):
     dataset_name = cfg.data.dataset
 
-    if dataset_name == "wlasl":
+    if dataset_name in ["wlasl100", "wlasl300", "wlasl1000", "wlasl2000"]:
         return WLASLOpenposeLightningDataModule(
             subset=cfg.data.subset,
             seq_len=cfg.data.seq_len,
@@ -25,7 +25,7 @@ def build_lightning_data_module(cfg):
             pin_memory=cfg.pin_memory,
             num_workers=cfg.num_workers
         )
-    elif dataset_name == "wlasl_mmpose":
+    elif dataset_name in ["wlasl100_mmpose", "wlasl300_mmpose", "wlasl1000_mmpose", "wlasl2000_mmpose"]:
         return WLASLMMPoseLightningDataModule(
             subset=cfg.data.subset,
             seq_len=cfg.data.seq_len,

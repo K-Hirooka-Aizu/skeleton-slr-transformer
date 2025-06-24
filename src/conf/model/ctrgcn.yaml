@@ -1,0 +1,6 @@
+model_name: ctrgcn
+graph_args:
+  layout: wlasl_openpose
+  strategy: spatial
+drop_out: 0.0
+adaptive: false
