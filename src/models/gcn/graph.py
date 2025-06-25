@@ -144,6 +144,57 @@ class Graph():
             neighbor_link = [(i-1, j-1) for (i, j) in neighbor_1base]
             self.edge = self_link + neighbor_link
             self.center = 11
+
+
+        elif layout == 'mmpose_coco_whole_with_face':
+            self.num_node = 78
+            self_link = [(i, i) for i in range(self.num_node)]
+            
+            face_idx = 14
+            rh_idx = 37
+            lh_idx = 58
+            neighbor_1base = [
+                (1,2),(2,4),
+                (1,3),(3,5),
+                (6,8),(8,10),
+                (7,9),(9,11),
+                (1,12),(12,6),(12,7),(12,13), # body 0~12 (1~13)
+
+                #face 13~35 (14~36) 
+                (14,15),(15,16),
+                (17,18),(18,19),
+                (20,16),(20,17),
+                (1,20),
+
+                (1,24),
+                (21,22),(22,23),(23,24),(24,25),(25,26),(26,21),
+
+                (1,27),
+                (27,28),(28,29),(29,30),(30,31),(31,32),(32,27),
+
+                (1,35),
+                (33,35),(35,34),(34,36),(36,33),
+
+                
+                # left hand 12~32
+                (10,rh_idx),
+                (rh_idx,rh_idx+1), (rh_idx+1,rh_idx+2), (rh_idx+2,rh_idx+3), (rh_idx+3,rh_idx+4),
+                (rh_idx,rh_idx+5), (rh_idx+5,rh_idx+6), (rh_idx+6,rh_idx+7), (rh_idx+7,rh_idx+8),
+                (rh_idx,rh_idx+9), (rh_idx+9,rh_idx+10), (rh_idx+10,rh_idx+11), (rh_idx+11,rh_idx+12),
+                (rh_idx,rh_idx+13), (rh_idx+13,rh_idx+14), (rh_idx+14,rh_idx+15), (rh_idx+15,rh_idx+16),
+                (rh_idx,rh_idx+17), (rh_idx+17,rh_idx+18), (rh_idx+18,rh_idx+19), (rh_idx+19,rh_idx+20),
+                # right hand 33~53
+                (11,lh_idx),
+                (lh_idx,lh_idx+1), (lh_idx+1,lh_idx+2), (lh_idx+2,lh_idx+3), (lh_idx+3,lh_idx+4),
+                (lh_idx,lh_idx+5), (lh_idx+5,lh_idx+6), (lh_idx+6,lh_idx+7), (lh_idx+7,lh_idx+8),
+                (lh_idx,lh_idx+9), (lh_idx+9,lh_idx+10), (lh_idx+10,lh_idx+11), (lh_idx+11,lh_idx+12),
+                (lh_idx,lh_idx+13), (lh_idx+13,lh_idx+14), (lh_idx+14,lh_idx+15), (lh_idx+15,lh_idx+16),
+                (lh_idx,lh_idx+17), (lh_idx+17,lh_idx+18), (lh_idx+18,lh_idx+19), (lh_idx+19,lh_idx+20),
+                
+                             ]
+            neighbor_link = [(i-1, j-1) for (i, j) in neighbor_1base]
+            self.edge = self_link + neighbor_link
+            self.center = 0
             
         # elif layout=='customer settings'
         #     pass

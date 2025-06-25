@@ -338,6 +338,8 @@ class WLASL_Dataset(Dataset):
     
     def _load_json_file(self,json_path):
         selected_kps_for_body = list(range(11)) + [17,18]
+                               # 13,14,15,16,17,18,19, 20,21,22,23,24,25, 26,27,28,29,30,31,    32,33,34,35
+        selected_kps_for_face = [41,43,45,46,48,50,51]+ list(range(60,72))                   + [72,78,86,90] # 7 + 12 + 4 = 23
         
         with open(json_path, 'r') as f:
             content = json.load(f)
@@ -352,8 +354,10 @@ class WLASL_Dataset(Dataset):
             
             body = np.concatenate([body,np.mean(body[:,5:7],axis=1,keepdims=True),np.mean(body[:,11:13],axis=1,keepdims=True)],axis=1)
             body = body[:,selected_kps_for_body]
-            
-            # data = np.concatenate([body,face,lhand,rhand],axis=1) # 13 + 68 +21 + 21 = 123
+
+            selected_kps_for_face = np.array(selected_kps_for_face) - 24
+            face = face[:,selected_kps_for_face]
+            # data = np.concatenate([body,face,lhand,rhand],axis=1) # 13 + 23 +21 + 21 = 78
             data = np.concatenate([body,lhand,rhand],axis=1) # 13 +21 + 21 = 13 + 42 = 55
             # for i in range(len(data)):
             #     data[i] = data[i] - data[i,11]
