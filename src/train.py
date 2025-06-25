@@ -9,7 +9,7 @@ import torchmetrics
 import lightning as L
 from lightning.pytorch.callbacks import ModelCheckpoint
 from lightning.pytorch.loggers import TensorBoardLogger
-from pytorch_lightning.utilities.seed import seed_everything
+from lightning.pytorch import seed_everything
 from pl_bolts.optimizers.lr_scheduler import LinearWarmupCosineAnnealingLR
 import hydra
 from omegaconf import DictConfig
