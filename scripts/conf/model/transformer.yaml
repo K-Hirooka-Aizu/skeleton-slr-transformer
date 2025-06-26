@@ -1,0 +1,9 @@
+model_name: SpatialTemporalTransformerWithClassToken
+model_args:
+    embedding_dim: 128
+    n_blocks: 10
+    head_dim: 64
+    n_heads: 8
+    ffn_expand_ratio: 4.0
+    ffn_dropout_ratio: 0.25
+    max_stochastic_depth_rate: 0.25

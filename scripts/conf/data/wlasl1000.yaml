@@ -1,0 +1,12 @@
+dataset: wlasl1000
+subset: asl1000
+num_classes: 1000
+in_channels: 2
+seq_len: 50
+n_joints: 55
+num_copies: 4
+sampling_strategy:
+    train: rnd_start
+    valid: k_copies
+    test: k_copies
+train_data_augmentation: true
