@@ -5,11 +5,11 @@ import torch
 from torch.utils.data import DataLoader
 import lightning as L
 
-from dataset import (
+from .dataset import (
     Sign_Dataset,
     WLASL_Dataset,
 )
-from augmentation_tools import JointMixAug
+from .augmentation_tools import JointMixAug
 
 def build_lightning_data_module(cfg):
     dataset_name = cfg.data.dataset
