@@ -7,12 +7,12 @@ from torch.utils.data import Dataset
 from sklearn.preprocessing import OneHotEncoder, LabelEncoder
 
 # My library
-from utils.sampling_func import (
+from .utils.sampling_func import (
     rand_start_sampling, 
     sequential_sampling, 
     k_copies_fixed_length_sequential_sampling
 )
-from augmentation_tools import augment_skeleton
+from .augmentation_tools import augment_skeleton
 
 class Sign_Dataset(Dataset):
     def __init__(self, index_file_path, split, pose_root, sample_strategy='rnd_start', num_samples=25, num_copies=4, img_transforms=None, video_transforms=None, test_index_file=None,skeleton_augmentation=True):
@@ -357,8 +357,8 @@ class WLASL_Dataset(Dataset):
 
             selected_kps_for_face = np.array(selected_kps_for_face) - 24
             face = face[:,selected_kps_for_face]
-            # data = np.concatenate([body,face,lhand,rhand],axis=1) # 13 + 23 +21 + 21 = 78
-            data = np.concatenate([body,lhand,rhand],axis=1) # 13 +21 + 21 = 13 + 42 = 55
+            data = np.concatenate([body,face,lhand,rhand],axis=1) # 13 + 23 +21 + 21 = 78
+            # data = np.concatenate([body,lhand,rhand],axis=1) # 13 +21 + 21 = 13 + 42 = 55
             # for i in range(len(data)):
             #     data[i] = data[i] - data[i,11]
             
