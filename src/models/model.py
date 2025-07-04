@@ -7,6 +7,7 @@ from .transformers import (
     SpatialTemporalTransformerWithClassToken,
     PreNormSpatialTemporalTransformer,
     PreNormSpatialTemporalTransformerWithClassToken,
+    TransformerVariant1,
 )
 from .gcn import(
     STGCN,
@@ -24,6 +25,9 @@ def build_model(cfg:DictConfig, **kwargs):
         return PreNormSpatialTemporalTransformer(in_channels=cfg.data.in_channels, num_classes=cfg.data.num_classes, seq_len=cfg.data.seq_len, n_joints=cfg.data.n_joints, **cfg.model.model_args, **kwargs)
     elif model_name == "PreNormSpatialTemporalTransformerWithClassToken":
         return PreNormSpatialTemporalTransformerWithClassToken(in_channels=cfg.data.in_channels, num_classes=cfg.data.num_classes, seq_len=cfg.data.seq_len, n_joints=cfg.data.n_joints, **cfg.model.model_args, **kwargs)
+
+    elif model_name == "TransformerVariant1":
+        return TransformerVariant1(in_channels=cfg.data.in_channels, num_classes=cfg.data.num_classes, seq_len=cfg.data.seq_len, n_joints=cfg.data.n_joints, **cfg.model.model_args, **kwargs)
 
     elif model_name == "stgcn":
         return STGCN(in_channels=cfg.data.in_channels, num_class=cfg.data.num_classes, graph_args=cfg.model.graph_args, edge_importance_weighting=cfg.model.edge_importance_weighting)
