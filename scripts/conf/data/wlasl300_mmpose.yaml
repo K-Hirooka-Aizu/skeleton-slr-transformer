@@ -1,12 +1,12 @@
-dataset: wlasl100_mmpose
-subset: asl100
-num_classes: 100
+dataset: wlasl300_mmpose
+subset: asl300
+num_classes: 300
 in_channels: 2
 seq_len: 50
 ## wo/ face
-n_joints: 55
+# n_joints: 55
 ## w/ face
-# n_joints: 78 
+n_joints: 78 
 num_copies: 4
 sampling_strategy:
     train: rnd_start
