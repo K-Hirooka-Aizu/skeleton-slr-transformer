@@ -1,7 +1,9 @@
 import os
 import json
+import math
 
 import numpy as np
+import pandas as pd
 import torch
 from torch.utils.data import Dataset
 from sklearn.preprocessing import OneHotEncoder, LabelEncoder
@@ -357,10 +359,8 @@ class WLASL_Dataset(Dataset):
 
             selected_kps_for_face = np.array(selected_kps_for_face) - 24
             face = face[:,selected_kps_for_face]
-            data = np.concatenate([body,face,lhand,rhand],axis=1) # 13 + 23 +21 + 21 = 78
-            # data = np.concatenate([body,lhand,rhand],axis=1) # 13 +21 + 21 = 13 + 42 = 55
-            # for i in range(len(data)):
-            #     data[i] = data[i] - data[i,11]
+            # data = np.concatenate([body,face,lhand,rhand],axis=1) # 13 + 23 +21 + 21 = 78
+            data = np.concatenate([body,lhand,rhand],axis=1) # 13 +21 + 21 = 13 + 42 = 55
             
         except:
             data = np.zeros((self.num_samples, 55 , 3))
@@ -378,3 +378,120 @@ def onehot2labels(label_encoder, y_onehot):
 
 def cat2labels(label_encoder, y_cat):
     return label_encoder.inverse_transform(y_cat).tolist()
+
+
+class KSL0_Skeleton_Dataset(Dataset):
+    def __init__(self,json_file_list, label_list, sample_strategy="rnd_start", seq_len=30, augmentation=False):
+        
+        self.json_file_list = json_file_list
+        self.label_list = label_list
+        self.sample_strategy = sample_strategy
+        self.seq_len = seq_len
+        self.augmentation=augmentation
+        self.num_copies = 4
+
+    def __len__(self):
+        return len(self.json_file_list)
+
+    def __getitem__(self,idx):
+        json_file_path,label = self.json_file_list[idx], self.label_list[idx]
+
+        # read json file
+        with open(json_file_path,'r') as f:
+            json_data = json.load(f)
+
+        # generate the start frame index
+        if self.sample_strategy == "rnd_start":
+            selected_index = self._rand_start_sampling(len(json_data),self.seq_len)
+        elif self.sample_strategy == "seq":
+            selected_index = self._sequential_sampling(len(json_data),self.seq_len)
+        elif self.sample_strategy == "k_copies":
+            selected_index = self._k_copies_fixed_length_sequential_sampling(len(json_data),self.seq_len, self.num_copies)
+        else:
+            raise NotImplementedError(f"Sampling_strategy {self.sample_strategy} is not implemented.")
+
+        # generate selected index list
+        selected_frame = np.array(list(json_data.keys()))[selected_index]
+        # extract selected frame data
+        data = self.get_pose_data(json_data,selected_frame) # T, V, C
+        data = self.nan2num(data).astype(np.float32)
+        # data = self.interpolate(data.reshape((self.seq_len,-1))).reshape(self.seq_len,-1,3).astype(np.float32)
+        if np.any(np.isnan(data)):
+            raise RuntimeError(f"Nan was detected.\n{json_file_path}")
+        data = torch.tensor(data,dtype=torch.float32).permute(2,0,1).unsqueeze(-1).numpy() # C, T, V, M
+        data = self.normalize(data)
+
+        if self.augmentation:
+            data = augment_skeleton(data)
+        
+        # data = data[:-1]
+
+        return torch.tensor(data,dtype=torch.float32), label
+
+    def get_pose_data(self,json_data,selected_frame):
+        data = list()
+        for i,key in enumerate(selected_frame):
+            
+            data.append(json_data[key])
+        data = np.array(data,dtype=float)
+        return data
+
+    def normalize(self,data):
+        for i in range(data.shape[0]):
+            min_vals = np.min(data[i], axis=None, keepdims=False)
+            max_vals = np.max(data[i], axis=None, keepdims=False)
+            if max_vals - min_vals != 0:
+                data[i] = (data[i] - min_vals) / (max_vals - min_vals)
+
+        return data
+
+    def interpolate(self,data):
+        interpolated_data = data.copy()
+        for i in range(data.shape[1]):  # 各特徴量の次元に対して
+            series = pd.Series(data[:, i])  # 各次元をSeriesに変換
+            series = series.infer_objects(copy=False)
+            interpolated_series = series.interpolate(method='linear', limit_direction='both')
+            interpolated_data[:, i] = interpolated_series.to_numpy()
+        return interpolated_data
+
+    def nan2num(self,data):
+        return np.nan_to_num(data,nan=0.0)
+    
+    def _rand_start_sampling(self,total_frame:int, seq_len:int):
+        if total_frame-seq_len > 0:
+            start = np.random.randint(low=0,high=total_frame-seq_len)
+            return np.arange(start,start+seq_len,dtype=np.int16)
+        else:
+            return np.repeat(np.arange(total_frame),seq_len//total_frame+1)[:seq_len]
+
+    def _sequential_sampling(self,total_frame:int, seq_len:int):
+        """Keep sequentially ${num_samples} frames from the whole video sequence by uniformly skipping frames."""
+        if total_frame >= seq_len:
+            return np.round(np.linspace(0,total_frame-1,seq_len,endpoint=True)).astype(np.int16)
+        else:
+            return np.repeat(np.arange(total_frame),seq_len//total_frame+1)[:seq_len]
+        
+    def _k_copies_fixed_length_sequential_sampling(self,total_frame:int, seq_len:int, num_copies:int=4):
+        frames_to_sample = []
+        if total_frame <= seq_len:
+            num_pads = seq_len - total_frame
+
+            frames_to_sample = list(range(total_frame))
+            frames_to_sample.extend([frames_to_sample[-1]] * num_pads)
+            frames_to_sample *= num_copies
+
+        elif seq_len * num_copies < total_frame:
+            mid = total_frame//2
+            half = seq_len * num_copies // 2
+
+            frame_start = mid - half
+
+            for i in range(num_copies):
+                frames_to_sample.extend(list(range(frame_start + i * seq_len, frame_start + i * seq_len + seq_len)))
+
+        else:
+            stride = math.floor((total_frame - seq_len) / (num_copies - 1))
+            for i in range(num_copies):
+                frames_to_sample.extend(list(range(i * stride, i * stride + seq_len)))
+
+        return frames_to_sample
