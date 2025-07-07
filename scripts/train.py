@@ -29,8 +29,12 @@ class LightningModel(L.LightningModule):
 
         self.seq_len = cfg.data.seq_len
         self.num_copies = cfg.data.num_copies
-        self.valid_sampling_strategy = cfg.data.sampling_strategy.valid
-        self.test_sampling_strategy = cfg.data.sampling_strategy.test
+        try:
+            self.valid_sampling_strategy = cfg.data.sampling_strategy.valid
+            self.test_sampling_strategy = cfg.data.sampling_strategy.test
+        except:
+            self.valid_sampling_strategy = None
+            self.test_sampling_strategy = None
 
         self.label_smooting = cfg.label_smooting
         self.loss_fn = nn.CrossEntropyLoss(label_smoothing=self.label_smooting)
@@ -173,9 +177,9 @@ def train(cfg : DictConfig) -> None:
         ],
         deterministic=True,
         )
+    
     trainer.fit(model=model, datamodule=datamodule)
-    model = LightningModel.load_from_checkpoint(checkpoint_callback.best_model_path, model=build_model(cfg), cfg=cfg)
-    trainer.validate(model=model,datamodule=datamodule)
+    trainer.validate(ckpt_path='best',datamodule=datamodule)
     trainer.test(ckpt_path='best',datamodule=datamodule)
 
 
