@@ -72,10 +72,50 @@ class B2TPostNormSpatialTemporalTransformerBlock(nn.Module):
 
         return x
 
+class PostNormSpatialTemporalTransformerBlock(nn.Module):
+    def __init__(self,input_dim:int,head_dim:int,n_heads:int,seq_len:int,n_joints:int,ffn_expand_ratio:float=4.0,ffn_dropout_ratio:float=.3,norm_layer=nn.LayerNorm,stochastic_depth_rate=0.0,bias=False):
+        super().__init__()
+        
+        self.multihead_self_attention1=MultiHeadSelfAttention(input_dim,head_dim,n_heads,bias=bias)
+        self.norm_layer1 = norm_layer(input_dim) if norm_layer is nn.BatchNorm2d else norm_layer([seq_len, n_joints, input_dim])
+        
+        self.multihead_self_attention2=RelativePositionalEncodeMultiHeadSelfAttention(input_dim,head_dim,n_heads,seq_len,bias=bias)
+        self.norm_layer2 = norm_layer(input_dim) if norm_layer is nn.BatchNorm2d else norm_layer([n_joints, seq_len, input_dim])
+        
+        self.feed_forward_network = FeedForwardNetwork(input_dim,ffn_expand_ratio,ffn_dropout_ratio,bias)
+        self.norm_layer3 = norm_layer(input_dim) if norm_layer is nn.BatchNorm2d else norm_layer([seq_len, n_joints, input_dim])
 
-###############################################################################   
-# latest main model
-###############################################################################
+        self.stochastic_depth = torchvision.ops.StochasticDepth(stochastic_depth_rate,mode="row") if stochastic_depth_rate > 0 else nn.Identity()
+
+    def forward(self,input:torch.Tensor, mask=None)->torch.Tensor:
+        """
+            inputs:
+                input : (batch, * , seq_len[temporal], vertex[spatial], feature)
+            returns:
+                x : the shape is same as input
+        """
+        input_shape = input.size()
+
+        # spatial self-attention
+        z, _ = self.multihead_self_attention1(input, mask)
+        x = input + self.stochastic_depth(z)
+        x = self.norm_layer1(x) if isinstance(self.norm_layer1,nn.LayerNorm) else self.norm_layer1(x.transpose(-1,1)).transpose(-1,1)
+
+        # temporal self-attention
+        x = x.transpose(-2,-3).contiguous()
+        z, _ = self.multihead_self_attention2(x, mask.transpose(-1,-2)) if mask != None else self.multihead_self_attention2(x)
+        x = x + self.stochastic_depth(z)
+        x = self.norm_layer2(x) if isinstance(self.norm_layer2,nn.LayerNorm) else self.norm_layer2(x.transpose(-1,1)).transpose(-1,1)
+        x = x.transpose(-2,-3).contiguous()
+        
+        # feed forward network
+        x = x + self.stochastic_depth(self.feed_forward_network(x)) + input
+        x = self.norm_layer3(x) if isinstance(self.norm_layer3,nn.LayerNorm) else self.norm_layer3(x.transpose(-1,1)).transpose(-1,1)
+
+        return x
+
+
+
 class SpatialTemporalTransformer(nn.Module):
     def __init__(
         self,
@@ -164,9 +204,6 @@ class SpatialTemporalTransformer(nn.Module):
         
 
 
-###############################################################################   
-# latest main model　with class token
-###############################################################################
 class SpatialTemporalTransformerWithClassToken(nn.Module):
     def __init__(
         self,
@@ -200,9 +237,10 @@ class SpatialTemporalTransformerWithClassToken(nn.Module):
         self.cls_token = nn.Parameter(torch.zeros(1,1,self.embedding_dim))
 
         self.embedding = nn.Sequential(
-            nn.Linear(in_channels,self.embedding_dim//2,bias=self.bias),
-            nn.Tanh(),
-            nn.Linear(self.embedding_dim//2,self.embedding_dim,bias=self.bias)
+            # nn.Linear(in_channels,self.embedding_dim//2,bias=self.bias),
+            # nn.Tanh(),
+            # nn.Linear(self.embedding_dim//2,self.embedding_dim,bias=self.bias)
+            nn.Linear(in_channels,self.embedding_dim,bias=self.bias)
         )
         self.spatial_positional_encode = SinusoidalPositionalEncoding(embedding_dim,n_joints)
 
