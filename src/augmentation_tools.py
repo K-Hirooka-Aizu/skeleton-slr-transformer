@@ -104,7 +104,7 @@ def Mix_Temporal(data, onehot_label, threshold=0.5, max_mixing_ratio=0.5):
     N,C,T,V,M = data.size()
     clone_index = torch.randperm(N)
     clone_data = data[clone_index].clone()
-    clone_onehot = onehot_label.clone()
+    clone_onehot = onehot_label[clone_index].clone()
 
     for i in range(N):
         strategy = random.choice([
@@ -163,7 +163,7 @@ def Mix_Vertex(data, onehot_label, threshold=0.5, max_mixing_ratio=0.5):
     N,C,T,V,M = data.size()
     clone_index = torch.randperm(N)
     clone_data = data[clone_index].clone()
-    clone_onehot = onehot_label.clone()
+    clone_onehot = onehot_label[clone_index].clone()
 
     for i in range(N):
         strategy = random.choice([
