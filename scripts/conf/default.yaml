@@ -1,7 +1,7 @@
 defaults:
  - _self_
  - data: wlasl100
- - model: transformer_default
+ - model: transformer
 
 epochs: 500
 batch_size: 16

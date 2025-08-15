@@ -12,6 +12,7 @@ from .dataset import (
     Sign_Dataset,
     WLASL_Dataset,
     KSL0_Skeleton_Dataset,
+    JSLV2_Skeleton_Dataset,
 )
 from .augmentation_tools import JointMixAug
 
@@ -43,6 +44,19 @@ def build_lightning_data_module(cfg):
 
     elif dataset_name in ["ksl0"]:
         return KSL0LightningDataModule(
+            dataset_dir_path=cfg.data.dataset_dir_path,
+            split_ratio=cfg.data.split_ratio,
+            seq_len=cfg.data.seq_len,
+            num_copies=cfg.data.num_copies,
+            sampling_strategy=cfg.data.sampling_strategy,
+            batch_size=cfg.batch_size,
+            pin_memory=cfg.pin_memory,
+            num_workers=cfg.num_workers,
+            seed=cfg.seed,
+        )
+    
+    elif dataset_name in ["jsl0"]:
+        return JSL0LightningDataModule(
             dataset_dir_path=cfg.data.dataset_dir_path,
             split_ratio=cfg.data.split_ratio,
             seq_len=cfg.data.seq_len,
@@ -187,6 +201,71 @@ class KSL0LightningDataModule(L.LightningDataModule):
         self.train_dataset = KSL0_Skeleton_Dataset(train_json_file_list, train_label, sample_strategy=self.sampling_strategy["train"], seq_len=self.seq_len, augmentation=self.train_data_augmentation)
         self.valid_dataset = KSL0_Skeleton_Dataset(valid_json_file_list, valid_label, sample_strategy=self.sampling_strategy["valid"], seq_len=self.seq_len, augmentation=False)
         self.test_dataset = KSL0_Skeleton_Dataset(test_json_file_list, test_label, sample_strategy=self.sampling_strategy["test"], seq_len=self.seq_len, augmentation=False)
+
+        self.num_classes = len(label2num)
+        self.collate_fn = partial(collate_fn, num_classes=self.num_classes)
+
+    def train_dataloader(self):
+        return DataLoader(self.train_dataset, batch_size=self.batch_size, shuffle=True, num_workers=self.num_workers, collate_fn=self.collate_fn, pin_memory=self.pin_memory, drop_last=True)
+
+    def val_dataloader(self):
+        return DataLoader(self.valid_dataset, batch_size=self.batch_size, shuffle=False, num_workers=self.num_workers, pin_memory=self.pin_memory, drop_last=False)
+
+    def test_dataloader(self):
+        return DataLoader(self.test_dataset, batch_size=self.batch_size, shuffle=False, num_workers=self.num_workers, pin_memory=self.pin_memory, drop_last=False)
+
+    def predict_dataloader(self):
+        return DataLoader(self.test_dataset, batch_size=self.batch_size, shuffle=False, num_workers=self.num_workers, pin_memory=self.pin_memory, drop_last=False)
+    
+
+class JSL0LightningDataModule(L.LightningDataModule):
+    def __init__(self, dataset_dir_path:str, split_ratio:list[float|int, float|int, float|int]=[0.6,0.2,0.2],seq_len:int=50, num_copies:int=4, sampling_strategy:dict[str,str]={"train":"rnd_start"}, train_data_augmentation:bool=False, batch_size:int=16, pin_memory:bool=False, num_workers:int=4, seed:int=42):
+        super().__init__()
+
+        assert len(split_ratio)==3 and sum(split_ratio)==1, f"args : split_ration should have 3 flaot or int elements. e.g. [0.6, 0.2, 0.2]"
+
+        self.dataset_dir_path = dataset_dir_path
+        self.split_ratio = split_ratio
+        self.seq_len = seq_len
+        self.num_copies = num_copies
+        self.sampling_strategy = sampling_strategy
+        self.train_data_augmentation = train_data_augmentation
+        self.batch_size = batch_size
+        self.pin_memory = pin_memory
+        self.num_workers = num_workers
+        self.seed = seed
+       
+
+    def setup(self, stage):
+        DATASET_PATH = self.dataset_dir_path
+        remove_target = []
+        # if you want to compare with Kakizaki et al. paper, uncomment below line.
+        # remove_target = ["".join([boin,siin]) for boin in ["g","z","d","b","p"] for siin in ["a","i","u","e","o"]] + ["xya","xyu","xyo""xtsu","long"]
+        print(remove_target)
+            
+        subject_list = [os.path.join(DATASET_PATH,subject_dir) for subject_dir in os.listdir(DATASET_PATH) if subject_dir.endswith("_jslv2") and "checkpoint" not in os.path.join(DATASET_PATH,subject_dir)]
+
+        train_set, other_set = train_test_split(subject_list,test_size=sum(self.split_ratio[1:])/sum(self.split_ratio),shuffle=True,random_state=self.seed)
+        valid_set, test_set = train_test_split(other_set,test_size=self.split_ratio[-1]/sum(self.split_ratio[1:]),shuffle=True,random_state=self.seed)
+
+        sign_name = list(set([os.path.splitext(os.path.basename(file))[0] for root,dirs,files in os.walk(DATASET_PATH) for file in files if file.endswith(".json") and "checkpoint" not in file]))
+        label2num = {sign_name:i for i,sign_name in enumerate(sign_name)}
+
+        train_json_file_list = [os.path.join(root,file) for subject_path in train_set for root,dirs,files in os.walk(subject_path) for file in files if file.endswith(".json") and "checkpoint" not in os.path.join(root,file)]
+        train_json_file_list = [path for path in train_json_file_list if os.path.splitext(os.path.basename(path))[0] not in remove_target]
+        train_label = [label2num[os.path.splitext(os.path.basename(json_path))[0]] for json_path in train_json_file_list]
+        
+        valid_json_file_list = [os.path.join(root,file) for subject_path in valid_set for root,dirs,files in os.walk(subject_path) for file in files if file.endswith(".json") and "checkpoint" not in os.path.join(root,file)]
+        valid_json_file_list = [path for path in valid_json_file_list if os.path.splitext(os.path.basename(path))[0] not in remove_target]
+        valid_label = [label2num[os.path.splitext(os.path.basename(json_path))[0]] for json_path in valid_json_file_list]
+        
+        test_json_file_list = [os.path.join(root,file) for subject_path in test_set for root,dirs,files in os.walk(subject_path) for file in files if file.endswith(".json") and "checkpoint" not in os.path.join(root,file)]
+        test_json_file_list = [path for path in test_json_file_list if os.path.splitext(os.path.basename(path))[0] not in remove_target]
+        test_label = [label2num[os.path.splitext(os.path.basename(json_path))[0]] for json_path in test_json_file_list]
+
+        self.train_dataset = JSLV2_Skeleton_Dataset(train_json_file_list, train_label, sample_strategy=self.sampling_strategy["train"], seq_len=self.seq_len, augmentation=self.train_data_augmentation)
+        self.valid_dataset = JSLV2_Skeleton_Dataset(valid_json_file_list, valid_label, sample_strategy=self.sampling_strategy["valid"], seq_len=self.seq_len, augmentation=False)
+        self.test_dataset = JSLV2_Skeleton_Dataset(test_json_file_list, test_label, sample_strategy=self.sampling_strategy["test"], seq_len=self.seq_len, augmentation=False)
 
         self.num_classes = len(label2num)
         self.collate_fn = partial(collate_fn, num_classes=self.num_classes)
