@@ -1,18 +1,16 @@
 # Template Repository for AI
 
-# BUILD Docker
+# BUILD container by Docker
 ```bash
-docker build -t dl-gpu-ssh ./docker/
-docker run --gpus all -d -v $(pwd):/workspace --name my-dl dl-gpu-ssh
-docker update --restart=always my-dl
+docker build -t dl-gpu ./docker/
+docker run --gpus all -d -v $(pwd):/workspace --name my-dl dl-gpu
 docker exec -it my-dl bash
 ```
 
-# BUILD by nerdctl
+# BUILD container by nerdctl
 ```bash
-nerdctl build -t dl-gpu-ssh ./docker/
-nerdctl run --gpus all -d -v $(pwd):/workspace --name my-dl dl-gpu-ssh
-nerdctl update --restart=always my-dl
+nerdctl build -t dl-gpu ./docker/
+nerdctl run --gpus all -d -v $(pwd):/workspace --name my-dl dl-gpu
 nerdctl exec -it my-dl bash
 ```
 
@@ -24,4 +22,6 @@ wget https://github.com/containerd/nerdctl/releases/download/v2.1.3/nerdctl-full
 export PATH=$HOME/.local/bin:$PATH
 
 containerd-rootless-setuptool.sh install
+
+CONTAINERD_NAMESPACE=default containerd-rootless-setuptool.sh install-buildkit-containerd
 ```
