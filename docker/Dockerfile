@@ -5,12 +5,11 @@ FROM nvidia/cuda:12.8.1-cudnn-devel-ubuntu24.04
 ENV DEBIAN_FRONTEND=noninteractive
 RUN sed -i -e 's/^APT/# APT/' -e 's/^DPkg/# DPkg/' \ 
     /etc/apt/apt.conf.d/docker-clean \
-    && apt-get update && apt-get upgrade -y \
-    && apt-get install --no-install-recommends -y \
-        python3 \
+    && apt update && apt upgrade -y \
+    && apt install --no-install-recommends -y \
+        python3.12-dev \
         curl \
         wget \
-        tmux \
         sudo \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
@@ -18,13 +17,12 @@ RUN sed -i -e 's/^APT/# APT/' -e 's/^DPkg/# DPkg/' \
 WORKDIR /workspace
 
 # Miniforge install
-RUN curl -L -O "https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-$(uname)-$(uname -m).sh" \
+RUN curl -L -O "https://github.com/conda-forge/miniforge/releases/download/25.3.1-0/Miniforge3-$(uname)-$(uname -m).sh" \
  && bash Miniforge3-$(uname)-$(uname -m).sh -b -p /root/conda \
  && rm Miniforge3-$(uname)-$(uname -m).sh
 
 # conda のパスを通す
 ENV PATH=/root/conda/bin:$PATH
-ENV TERM=xterm-256color
 
 # conda環境を作成
 RUN conda create -n pt271slr python=3.10 -y
