@@ -2,16 +2,20 @@
 
 # BUILD container by Docker
 ```bash
-docker build -t dl-gpu ./docker/
+docker build -t dl-gpu -f ./docker/Dockerfile .
 docker run --gpus all -d -v $(pwd):/workspace --name my-dl dl-gpu
 docker exec -it my-dl bash
+
+docker stop my-dl && docker rm my-dl && docker rmi dl-gpu
 ```
 
 # BUILD container by nerdctl
 ```bash
-nerdctl build -t dl-gpu ./docker/
+nerdctl build -t dl-gpu -f ./docker/Dockerfile .
 nerdctl run --gpus all -d -v $(pwd):/workspace --name my-dl dl-gpu
 nerdctl exec -it my-dl bash
+
+nerdctl stop my-dl && nerdctl rm my-dl && nerdctl rmi dl-gpu
 ```
 
 # BUILD nerdctl
