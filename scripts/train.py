@@ -50,6 +50,8 @@ class LightningModel(L.LightningModule):
         self.train_metrics = torchmetrics.MetricCollection(
             {
                 f"accuracy@{str(k).zfill(2)}": torchmetrics.classification.Accuracy(task="multiclass", num_classes=cfg.data.num_classes, top_k=k) for k in self.topk
+            }|{
+                f"recall@{str(k).zfill(2)}": torchmetrics.Recall(task="multiclass", num_classes=cfg.data.num_classes, top_k=k) for k in self.topk
             },
             prefix="train_",
         )
