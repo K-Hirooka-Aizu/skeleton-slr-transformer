@@ -49,9 +49,9 @@ class LightningModel(L.LightningModule):
 
         self.train_metrics = torchmetrics.MetricCollection(
             {
-                f"accuracy@{str(k).zfill(2)}": torchmetrics.classification.Accuracy(task="multiclass", num_classes=cfg.data.num_classes, top_k=k) for k in self.topk
+                f"accuracy_PI@{str(k).zfill(2)}": torchmetrics.classification.Accuracy(task="multiclass", num_classes=cfg.data.num_classes, average="micro", top_k=k) for k in self.topk
             }|{
-                f"recall@{str(k).zfill(2)}": torchmetrics.Recall(task="multiclass", num_classes=cfg.data.num_classes, top_k=k) for k in self.topk
+                f"accuracy_PC@{str(k).zfill(2)}": torchmetrics.classification.Accuracy(task="multiclass", num_classes=cfg.data.num_classes, average="macro", top_k=k) for k in self.topk
             },
             prefix="train_",
         )
@@ -164,8 +164,8 @@ def train(cfg : DictConfig) -> None:
     logger = TensorBoardLogger(output_dir, name=f"{cfg.model.model_name}__{cfg.data.dataset}")
     checkpoint_callback = ModelCheckpoint(
         dirpath=f"../models/{cfg.model.model_name}",
-        filename="{epoch}-{valid_loss:.4f}-{valid_accuracy@01:.4f}",
-        monitor="valid_accuracy@01",
+        filename="{epoch}-{valid_loss:.4f}-{valid_accuracy_PI@01:.4f}",
+        monitor="valid_accuracy_PI@01",
         mode="max",
     )
     trainer = L.Trainer(
