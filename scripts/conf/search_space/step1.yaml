@@ -1,0 +1,16 @@
+# Step 1: LRとWarmup Epochの探索
+epochs:
+  type: int
+  low: 10
+  high: 50
+
+optim_args.lr:
+  type: float
+  low: 1.0e-5
+  high: 1.0e-3
+  log: true
+
+scheduler_args.warmup_epoch:
+  type: int
+  low: 1
+  high: 10

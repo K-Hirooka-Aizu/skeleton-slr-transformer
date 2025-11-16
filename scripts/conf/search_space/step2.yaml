@@ -1,0 +1,22 @@
+# Step 2: モデル構造の探索
+model.model_args.embedding_dim:
+  type: categorical
+  choices: [64, 128, 256]
+
+model.model_args.n_blocks:
+  type: int
+  low: 6
+  high: 12
+
+model.model_args.head_dim:
+  type: categorical
+  choices: [32, 64]
+
+model.model_args.n_heads:
+  type: categorical
+  choices: [4, 8]
+
+model.model_args.ffn_expand_ratio:
+  type: float
+  low: 2.0
+  high: 4.0
