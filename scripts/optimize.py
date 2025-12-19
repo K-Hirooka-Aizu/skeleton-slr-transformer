@@ -25,7 +25,6 @@ from src.datamodule import build_lightning_data_module
 from src.models import build_model
 
 # --- train.py から LightningModel クラスをコピー ---
-# (別ファイルで定義している場合は import LightningModel してください)
 class LightningModel(L.LightningModule):
     def __init__(self,model:nn.Module,cfg:DictConfig):
         super().__init__()
@@ -40,13 +39,10 @@ class LightningModel(L.LightningModule):
             self.valid_sampling_strategy = None
             self.test_sampling_strategy = None
 
-        # ★ Optunaで探索 ★
         self.label_smooting = cfg.label_smooting 
         self.loss_fn = nn.CrossEntropyLoss(label_smoothing=self.label_smooting)
 
-        # ★ Optunaで探索 ★
         self.epochs = cfg.epochs
-        # ★ Optunaで探索 ★
         self.lr = cfg.optim_args.lr 
         
         self.min_lr = cfg.scheduler_args.min_lr
@@ -120,10 +116,8 @@ class LightningModel(L.LightningModule):
     
     # ... test_step, on_test_epoch_end は train.py と同様 ...
     def test_step(self, batch, batch_idx):
-        # (train.py と同じコード)
         pass
     def on_test_epoch_end(self):
-        # (train.py と同じコード)
         pass
 
 # --- train.py から fix_seed 関数をコピー ---
@@ -153,12 +147,6 @@ class HyperparameterOptimizer:
         # DataModuleのシャッフルなどを固定するため、最初に一度実行
         fix_seed(cfg.seed)
         seed_everything(seed=cfg.seed, workers=True)
-        
-        # --- DataModuleの準備 ---
-        # データは全トライアルで共通なので、一度だけ読み込む
-        print("Initializing DataModule...")
-        self.datamodule = build_lightning_data_module(cfg)
-        print("DataModule initialized.")
 
     def _generate_trial_cfg(self, trial: optuna.trial.Trial) -> DictConfig:
         """
@@ -207,6 +195,8 @@ class HyperparameterOptimizer:
             model_arch = build_model(trial_cfg)
             model = LightningModel(model_arch, trial_cfg)
 
+            datamodule = build_lightning_data_module(self.base_cfg)
+
             # 3. Loggerの設定
             # ログが混ざらないよう、トライアルごとに保存先を分ける
             logger = TensorBoardLogger(
@@ -232,14 +222,14 @@ class HyperparameterOptimizer:
                 ],
                 deterministic=True,
                 enable_checkpointing=False,  # ★ HPO中はFalse推奨
-                enable_progress_bar=False,  # ログが綺麗になる
+                enable_progress_bar=True,  # ログが綺麗になる
                 # (必要に応じて) GPU設定
                 # accelerator="gpu", 
                 # devices=1,
             )
             
             # 6. 学習実行
-            trainer.fit(model=model, datamodule=self.datamodule)
+            trainer.fit(model=model, datamodule=datamodule)
             
             # 7. スコアを返す
             # Pruning Callbackが監視しているメトリクスを取得
@@ -297,7 +287,6 @@ def main(cfg: DictConfig) -> None:
     print(OmegaConf.to_yaml(cfg))
     print("--------------------------------------")
 
-    # オプティマイザを起動
     optimizer = HyperparameterOptimizer(cfg)
     optimizer.run_optimization()
 
