@@ -17,7 +17,6 @@ from pl_bolts.optimizers.lr_scheduler import LinearWarmupCosineAnnealingLR
 import hydra
 from omegaconf import DictConfig
 
-
 # My library
 from src.datamodule import build_lightning_data_module
 from src.models import build_model
