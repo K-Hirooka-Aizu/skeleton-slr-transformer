@@ -28,7 +28,7 @@ ENV PATH=/root/conda/bin:$PATH
 COPY requirements.txt .
 RUN conda create -n pt271slr python=3.10 -y \
  && echo "source /root/conda/bin/activate pt271slr" >> /root/.bashrc \
- && /bin/bash -c "source /root/conda/bin/activate pt271slr && pip install -r requirements.txt"
+ && /bin/bash -c "source /root/conda/bin/activate pt271slr && pip install -r requirements.txt && pip install -e ."
 
 RUN echo ". /root/conda/etc/profile.d/conda.sh" >> /root/.bashrc \
  && echo "conda activate pt271slr" >> /root/.bashrc
