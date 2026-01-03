@@ -1,8 +1,4 @@
-import os
 import random
-import sys
-
-sys.path.append("../")
 
 import numpy as np
 import torch
@@ -18,8 +14,8 @@ import hydra
 from omegaconf import DictConfig
 
 # My library
-from src.datamodule import build_lightning_data_module
-from src.models import build_model
+from sstan.datamodule import build_lightning_data_module
+from sstan.models import build_model
 
 class LightningModel(L.LightningModule):
     def __init__(self,model:nn.Module,cfg:DictConfig):
