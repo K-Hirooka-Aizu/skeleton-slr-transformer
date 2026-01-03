@@ -83,8 +83,8 @@ class WLASLOpenposeLightningDataModule(L.LightningDataModule):
         self.pin_memory = pin_memory
         self.num_workers = num_workers
 
-        self.split_file =  '../data/official_wlasl/splits/{}.json'.format(subset)
-        self.pose_data_root = "../data/official_wlasl/pose_per_individual_videos"
+        self.split_file =  './data/official_wlasl/splits/{}.json'.format(subset)
+        self.pose_data_root = "./data/official_wlasl/pose_per_individual_videos"
 
         with open(self.split_file, 'r') as f:
             content = json.load(f)
@@ -127,8 +127,8 @@ class WLASLMMPoseLightningDataModule(L.LightningDataModule):
         self.pin_memory = pin_memory
         self.num_workers = num_workers
 
-        self.split_file =  '../data/official_wlasl/splits/{}.json'.format(subset)
-        self.pose_data_root = "../data/official_wlasl/skeleton_mmpose"
+        self.split_file =  './data/official_wlasl/splits/{}.json'.format(subset)
+        self.pose_data_root = "./data/official_wlasl/skeleton_mmpose"
 
         with open(self.split_file, 'r') as f:
             content = json.load(f)
