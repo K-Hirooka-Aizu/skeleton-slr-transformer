@@ -9,7 +9,7 @@ import torch
 import torch.utils.data as data_utl
 from tqdm import tqdm
 
-from src.utils.sampling_func import (
+from .utils.sampling_func import (
     sequential_sampling,
     rand_start_sampling,
     k_copies_fixed_length_sequential_sampling
