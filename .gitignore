@@ -4,4 +4,6 @@ __pycache__
 
 /outputs/
 /models/
+/features/
+/images/
 !*.md
