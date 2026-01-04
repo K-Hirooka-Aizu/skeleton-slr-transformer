@@ -57,11 +57,10 @@ class WLASLVideoDataset(data_utl.Dataset):
         elif self.sampling_strategy == 'seq':
             frames_to_sample = sequential_sampling(0, end_frame_index-start_frame_index, self.seq_len)
         elif self.sampling_strategy == 'k_copies':
-            frames_to_sample = k_copies_fixed_length_sequential_sampling(0, end_frame_index-start_frame_index, self.seq_len,
-                                                                         self.num_copies)
+            frames_to_sample = k_copies_fixed_length_sequential_sampling(0, end_frame_index-start_frame_index, self.seq_len, self.num_copies)
         else:
             raise RuntimeError('Unimplemented sample strategy found: {}.'.format(self.sampling_strategy))
-        
+        print(frames_ndarray.shape)
         frames_ndarray = frames_ndarray[frames_to_sample]
 
         frames_ndarray /= 255.
@@ -69,7 +68,6 @@ class WLASLVideoDataset(data_utl.Dataset):
 
         if self.transforms:
             frames_tensor = self.transforms(frames_tensor)
-
         return frames_tensor, onehot_tensor
 
     @staticmethod
@@ -96,7 +94,7 @@ class WLASLVideoDataset(data_utl.Dataset):
                 cv2.imwrite(os.path.join(save_dir_path,f"image_{str(i).zfill(5)}.jpg"), img)
         vidcap.release()
         
-        for i in range(end_frmae_index-start_frame_index):
+        for i in range(end_frmae_index-start_frame_index+1):
             if not os.path.exists(os.path.join(save_dir_path,f"image_{str(i).zfill(5)}.jpg")):
                 raise RuntimeError(f"{os.path.join(save_dir_path,f'image_{str(i).zfill(5)}.jpg')} is not exists.")
             
@@ -222,7 +220,7 @@ if __name__=="__main__":
         transforms=None
     )
     print(WLASLVideoDataset.gloss2index.keys())
+    print(len(dataset))
     for i, (data, label) in enumerate(tqdm(dataset)):
-        if i % 50 == 0:
-            print(f"{type(data)}: {data.shape}")
-            print(f"{type(label)}: {label.shape}")
+        print(f"{type(data)}: {data.shape}")
+        print(f"{type(label)}: {label.shape}")
