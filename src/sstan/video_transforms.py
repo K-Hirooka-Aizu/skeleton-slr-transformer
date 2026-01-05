@@ -22,10 +22,10 @@ class ResizeVideo(nn.Module):
         """
         Args:
             size (sequence or int): 出力サイズ。
-                (h, w) のタプルの場合はそのサイズに強制変換（アスペクト比無視）。
+                (h, w) のタプルの場合はそのサイズに強制変換(アスペクト比無視)。
                 int の場合は、短い辺がそのサイズになるようにアスペクト比を維持してリサイズ。
-            interpolation (InterpolationMode): 補間方法（デフォルト: BILINEAR）
-            antialias (bool): アンチエイリアス処理を行うかどうか（デフォルト: True）
+            interpolation (InterpolationMode): 補間方法(デフォルト: BILINEAR)
+            antialias (bool): アンチエイリアス処理を行うかどうか(デフォルト: True)
         """
         super().__init__()
         self.size = size
@@ -126,7 +126,7 @@ class NormalizeVideo(nn.Module):
 class RandomCropVideo(nn.Module):
     """
     (C, T, H, W) 形式のビデオテンソルをランダムに切り抜くクラス。
-    【重要】 時間軸 (T) 全体に対して「同じ位置」を切り抜きます（Temporal Consistency）。
+    【重要】 時間軸 (T) 全体に対して「同じ位置」を切り抜きます(Temporal Consistency)。
     """
     def __init__(self, size: Union[int, Tuple[int, int]]):
         super().__init__()
