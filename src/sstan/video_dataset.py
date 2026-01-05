@@ -2,6 +2,8 @@ import json
 import os
 from pathlib import Path
 from typing import List, Tuple, Any
+import random
+import math
 
 import cv2
 import numpy as np
@@ -9,26 +11,20 @@ import torch
 import torch.utils.data as data_utl
 from tqdm import tqdm
 
-from .utils.sampling_func import (
-    sequential_sampling,
-    rand_start_sampling,
-    k_copies_fixed_length_sequential_sampling
-)
-
 # Type alias for the wlasl video dataset item structure : (vid, gloss, video_path, start_frame_index, end_frame_index)
 DatasetItem = Tuple[str, str, str, int, int]
 
 class WLASLVideoDataset(data_utl.Dataset):
     gloss2index:dict[str, int]|None = None
 
-    def __init__(self, split_file_path:str, split:str, video_dir_path:str, seq_len:int, sampling_strategy:str, transforms=None)->None:
+    def __init__(self, split_file_path:str, split:str, video_dir_path:str, seq_len:int, num_copies:int, sampling_strategy:str, transforms=None)->None:
         self.split_file_path = split_file_path
         self.split = split
         self.video_dir_path = video_dir_path
         self.seq_len = seq_len
         self.sampling_strategy = sampling_strategy
         self.transforms = transforms
-        self.num_copies = 4
+        self.num_copies = num_copies
 
         self.samples:list[DatasetItem] = make_datast_remake(
             split_file=self.split_file_path,
@@ -52,15 +48,19 @@ class WLASLVideoDataset(data_utl.Dataset):
         onehot_tensor = torch.from_numpy(onehot_ndarray[WLASLVideoDataset.gloss2index[gloss]])
 
         frames_ndarray = self._load_video(video_path=video_path, start_frame_index=start_frame_index, end_frmae_index=end_frame_index)
+        # print(f"{start_frame_index} ~ {end_frame_index}")
         if self.sampling_strategy == 'rnd_start':
-            frames_to_sample = rand_start_sampling(0, end_frame_index-start_frame_index, self.seq_len)
+            frames_to_sample = self.rand_start_sampling(0, end_frame_index-start_frame_index, self.seq_len)
         elif self.sampling_strategy == 'seq':
-            frames_to_sample = sequential_sampling(0, end_frame_index-start_frame_index, self.seq_len)
+            frames_to_sample = self.sequential_sampling(0, end_frame_index-start_frame_index, self.seq_len)
         elif self.sampling_strategy == 'k_copies':
-            frames_to_sample = k_copies_fixed_length_sequential_sampling(0, end_frame_index-start_frame_index, self.seq_len, self.num_copies)
+            frames_to_sample = self.k_copies_fixed_length_sequential_sampling(0, end_frame_index-start_frame_index, self.seq_len, self.num_copies)
         else:
             raise RuntimeError('Unimplemented sample strategy found: {}.'.format(self.sampling_strategy))
-        print(frames_ndarray.shape)
+
+        padding_mask = self.make_padding_mask(frames_to_sample)
+        padding_mask = torch.tensor(padding_mask, dtype=torch.bool)
+
         frames_ndarray = frames_ndarray[frames_to_sample]
 
         frames_ndarray /= 255.
@@ -68,7 +68,7 @@ class WLASLVideoDataset(data_utl.Dataset):
 
         if self.transforms:
             frames_tensor = self.transforms(frames_tensor)
-        return frames_tensor, onehot_tensor
+        return (frames_tensor, padding_mask), onehot_tensor
 
     @staticmethod
     def _load_video(video_path:str, start_frame_index:int|None=None, end_frmae_index:int|None=None)->np.ndarray:
@@ -84,7 +84,6 @@ class WLASLVideoDataset(data_utl.Dataset):
         save_dir_path = f"./images/{vid}"
         if not os.path.exists(save_dir_path):
             os.makedirs(save_dir_path,exist_ok=True)
-            print(f"DEBUG {total_frames}")
             for i in range(total_frames):
                 success, img = vidcap.read()
                 if not success:
@@ -106,6 +105,97 @@ class WLASLVideoDataset(data_utl.Dataset):
 
         return frames_ndarray
     
+    @staticmethod
+    def rand_start_sampling(frame_start, frame_end, num_samples):
+        num_frames = frame_end - frame_start + 1
+
+        if num_frames > num_samples:
+            select_from = range(frame_start, frame_end - num_samples + 1)
+            sample_start = random.choice(select_from)
+            frames_to_sample = list(range(sample_start, sample_start + num_samples))
+
+        else:
+            frames_to_sample = list(range(frame_start, frame_end + 1))
+            frames_to_sample.extend(
+                [frame_end] * (num_samples - num_frames)
+            )
+        return frames_to_sample
+    
+    @staticmethod
+    def sequential_sampling(frame_start, frame_end, num_samples):
+        num_frames = frame_end - frame_start + 1
+        frames_to_sample = []
+
+        if num_frames > num_samples:
+            frames_skip = set()
+            num_skips = num_frames - num_samples
+            interval = max(1, num_frames // num_skips)
+
+            for i in range(frame_start, frame_end + 1):
+                if i % interval == 0 and len(frames_skip) < num_skips:
+                    frames_skip.add(i)
+
+            for i in range(frame_start, frame_end + 1):
+                if i not in frames_skip:
+                    frames_to_sample.append(i)
+        else:
+            frames_to_sample = list(range(frame_start, frame_end + 1))
+            frames_to_sample.extend(
+                [frame_end] * (num_samples - num_frames)
+            )
+
+        return frames_to_sample
+    
+    @staticmethod
+    def k_copies_fixed_length_sequential_sampling(frame_start, frame_end, num_samples, num_copies):
+        num_frames = frame_end - frame_start + 1
+
+        frames_to_sample = []
+
+        if num_frames <= num_samples:
+            num_pads = num_samples - num_frames
+
+            frames_to_sample = list(range(frame_start, frame_end + 1))
+            frames_to_sample.extend([frame_end] * num_pads)
+
+            frames_to_sample *= num_copies
+
+        elif num_samples * num_copies < num_frames:
+            mid = (frame_start + frame_end) // 2
+            half = num_samples * num_copies // 2
+
+            frame_start = mid - half
+
+            for i in range(num_copies):
+                frames_to_sample.extend(list(range(frame_start + i * num_samples,
+                                                frame_start + i * num_samples + num_samples)))
+
+        else:
+            stride = math.floor((num_frames - num_samples) / (num_copies - 1))
+            for i in range(num_copies):
+                frames_to_sample.extend(list(range(frame_start + i * stride,
+                                                frame_start + i * stride + num_samples)))
+
+        return frames_to_sample
+
+    @staticmethod
+    def make_padding_mask(frames):
+        """
+        frames: List[int], length = num_samples
+        return: Bool mask, True = valid, False = padding
+        """
+        mask = [True] * len(frames)
+
+        last_real = None
+        for i in range(len(frames)):
+            if i == 0 or frames[i] != frames[i-1]:
+                last_real = i
+            else:
+                # 同一 index の繰り返し → padding 開始
+                if frames[i] == frames[last_real]:
+                    mask[i] = False
+
+        return mask
 
 def get_gloss_set(dataset:List[DatasetItem]):
 
