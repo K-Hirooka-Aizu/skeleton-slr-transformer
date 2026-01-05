@@ -1,8 +1,11 @@
 import torch
 import torch.nn as nn
 import torchvision.transforms.functional as F
+from torchvision import transforms
 from torchvision.transforms import RandomAffine, InterpolationMode
-from typing import Tuple, Union, List, Optional
+from typing import Tuple, Union, List, Optional, Dict, Any
+
+
 
 class ResizeVideo(nn.Module):
     """
@@ -218,6 +221,52 @@ class RandomAffineVideo(RandomAffine):
             s += f', center={self.center}'
         s += ')'
         return s
+    
+TRANSFORM_REGISTRY = {
+    "ResizeVideo": ResizeVideo,
+    "CenterCropVideo": CenterCropVideo,
+    "RandomCropVideo": RandomCropVideo,
+    "RandomAffineVideo": RandomAffineVideo,
+    "NormalizeVideo": NormalizeVideo,
+}
+
+def build_transforms_from_config(config_list: List[Dict[str, Any]]) -> transforms.Compose:
+    """
+    設定リストから transform パイプラインを動的に構築する関数。
+
+    Args:
+        config_list (List[Dict]): 以下のような辞書のリスト
+            [
+                {"name": "ToFloatTensorVideo"},
+                {"name": "ResizeVideo", "args": {"size": 256}},
+                {"name": "RandomCropVideo", "args": {"size": 224}},
+                ...
+            ]
+    
+    Returns:
+        transforms.Compose: 構築されたパイプライン
+    """
+    transform_instances = []
+
+    for config in config_list:
+        name = config.get("name")
+        args = config.get("args", {}) # 引数がない場合は空辞書
+
+        if name not in TRANSFORM_REGISTRY:
+            raise ValueError(f"Transform '{name}' is not found in registry. Available: {list(TRANSFORM_REGISTRY.keys())}")
+
+        # クラスを取得
+        transform_class = TRANSFORM_REGISTRY[name]
+
+        try:
+            # 引数を展開してインスタンス化 (**args)
+            instance = transform_class(**args)
+            transform_instances.append(instance)
+            # print(f"Built: {name} with args: {args}") # デバッグ用
+        except TypeError as e:
+            raise TypeError(f"Failed to instantiate {name}. Check arguments: {args}. Error: {e}")
+
+    return transforms.Compose(transform_instances)
 
 if __name__=="__main__":
     import torchvision.transforms as transforms
