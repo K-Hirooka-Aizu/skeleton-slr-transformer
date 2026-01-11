@@ -1,5 +1,5 @@
 dataset: ksl0
-dataset_dir_path: ../data/ksl0/skeleton_files
+dataset_dir_path: ./data/ksl0/skeleton_files
 split_ratio:
   - 0.8
   - 0.1

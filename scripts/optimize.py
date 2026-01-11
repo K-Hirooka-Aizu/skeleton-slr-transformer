@@ -1,6 +1,4 @@
-import os
 import random
-import sys
 import numpy as np
 import torch
 import torch.nn as nn
@@ -19,10 +17,8 @@ import optuna
 from optuna.integration import PyTorchLightningPruningCallback
 
 # My library
-# (train.py と同じ階層に optimize.py を置くことを想定)
-sys.path.append("../")
-from src.datamodule import build_lightning_data_module
-from src.models import build_model
+from sstan.datamodule import build_lightning_data_module
+from sstan.models import build_model
 
 # --- train.py から LightningModel クラスをコピー ---
 class LightningModel(L.LightningModule):
