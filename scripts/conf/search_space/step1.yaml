@@ -1,16 +1,40 @@
-# Step 1: LRとWarmup Epochの探索
-epochs:
-  type: int
-  low: 10
-  high: 50
+# Step 1: モデル構造 & 正則化パラメータの探索
 
-optim_args.lr:
+# --- モデルの構造 (Capacity) ---
+model.model_args.embedding_dim:
+  type: categorical
+  choices: [64, 128, 256]
+
+model.model_args.n_blocks:
+  type: int
+  low: 6
+  high: 12
+
+model.model_args.head_dim:
+  type: categorical
+  choices: [16,32, 64]
+
+model.model_args.n_heads:
+  type: categorical
+  choices: [4, 8, 16]
+
+model.model_args.ffn_expand_ratio:
   type: float
-  low: 1.0e-5
-  high: 1.0e-3
-  log: true
+  low: 2.0
+  high: 8.0
 
-scheduler_args.warmup_epoch:
-  type: int
-  low: 1
-  high: 10
+# --- 正則化 (Regularization) ---
+label_smooting:
+  type: float
+  low: 0.0
+  high: 0.4
+
+model.model_args.ffn_dropout_ratio:
+  type: float
+  low: 0.1
+  high: 0.5
+
+model.model_args.max_stochastic_depth_rate:
+  type: float
+  low: 0.1
+  high: 0.5
