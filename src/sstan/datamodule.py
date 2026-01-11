@@ -343,9 +343,9 @@ class WLASLVideolightningDataModule(L.LightningDataModule):
         }
 
     def setup(self, stage):
-        self.train_dataset = WLASLVideoDataset(split_file_path=self.split_file, video_dir_path=self.video_dir_path, split="train", seq_len=self.seq_len, num_copies=self.num_copies, sampling_strategy=self.sampling_strategy["train"], transforms=None)
-        self.valid_dataset = WLASLVideoDataset(split_file_path=self.split_file, video_dir_path=self.video_dir_path, split="val", seq_len=self.seq_len, num_copies=self.num_copies, sampling_strategy=self.sampling_strategy["valid"], transforms=None)
-        self.test_dataset = WLASLVideoDataset(split_file_path=self.split_file, video_dir_path=self.video_dir_path, split="test", seq_len=self.seq_len, num_copies=self.num_copies, sampling_strategy=self.sampling_strategy["test"], transforms=None)
+        self.train_dataset = WLASLVideoDataset(split_file_path=self.split_file, video_dir_path=self.video_dir_path, split="train", seq_len=self.seq_len, num_copies=self.num_copies, sampling_strategy=self.sampling_strategy["train"], transforms=self.transforms_dict["train"])
+        self.valid_dataset = WLASLVideoDataset(split_file_path=self.split_file, video_dir_path=self.video_dir_path, split="val", seq_len=self.seq_len, num_copies=self.num_copies, sampling_strategy=self.sampling_strategy["valid"], transforms=self.transforms_dict["val"])
+        self.test_dataset = WLASLVideoDataset(split_file_path=self.split_file, video_dir_path=self.video_dir_path, split="test", seq_len=self.seq_len, num_copies=self.num_copies, sampling_strategy=self.sampling_strategy["test"], transforms=self.transforms_dict["test"])
 
     def train_dataloader(self):
         return DataLoader(self.train_dataset, batch_size=self.batch_size, shuffle=True, num_workers=self.num_workers, pin_memory=self.pin_memory, drop_last=True)
