@@ -1,0 +1,5 @@
+model_name: i3d
+model_args:
+    spatial_squeeze: true
+    final_endpoint: Logits
+    dropout_keep_prob: 0.5
