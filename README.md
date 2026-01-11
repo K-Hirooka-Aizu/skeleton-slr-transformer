@@ -12,7 +12,8 @@ docker stop my-dl && docker rm my-dl && docker rmi dl-gpu
 # BUILD container by nerdctl
 ```bash
 nerdctl build -t dl-gpu -f ./docker/Dockerfile .
-nerdctl run --gpus all -d -v $(pwd):/workspace --name my-dl dl-gpu
+nerdctl run --ipc host --gpus all -d -v $(pwd):/workspace --name my-dl dl-gpu
+# nerdctl run --gpus all -d -v $(pwd):/workspace -v /etc/localtime:/etc/localtime:ro --name my-dl dl-gpu
 nerdctl exec -it my-dl bash
 
 nerdctl stop my-dl && nerdctl rm my-dl && nerdctl rmi dl-gpu

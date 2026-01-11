@@ -1,0 +1,13 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sstan"
+version = "0.1.0"
+
+[tool.setuptools.packages.find]
+where = ["src"]  # パッケージは 'src' の下にあると指定
+
+[tool.isort]
+profile = "black"

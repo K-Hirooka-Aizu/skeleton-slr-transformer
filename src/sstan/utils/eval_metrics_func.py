@@ -1,3 +1,5 @@
+import torch
+
 def cal_top_k_accuracy(output, target, top_k=[1]):
     output, target = output.cpu(), target.cpu()
     accuracies = []

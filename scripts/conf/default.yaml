@@ -31,7 +31,7 @@ topk: [1,5,10]
 
 hydra:
   run:
-    dir: ../outputs/${now:%Y-%m-%d}/${now:%H-%M-%S}
+    dir: ./outputs/${now:%Y-%m-%d}/${now:%H-%M-%S}
   sweep:
-    dir: ../outputs/${now:%Y-%m-%d}/${now:%H-%M-%S}
+    dir: ./outputs/${now:%Y-%m-%d}/${now:%H-%M-%S}
     subdir: ${hydra.job.override_dirname}

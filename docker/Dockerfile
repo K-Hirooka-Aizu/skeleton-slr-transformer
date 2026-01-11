@@ -3,6 +3,8 @@ FROM nvidia/cuda:12.8.1-cudnn-devel-ubuntu24.04
 
 # タイムゾーン設定とパッケージ更新
 ENV DEBIAN_FRONTEND=noninteractive
+ENV TZ=Asia/Tokyo
+
 RUN sed -i -e 's/^APT/# APT/' -e 's/^DPkg/# DPkg/' \ 
     /etc/apt/apt.conf.d/docker-clean \
     && apt update && apt upgrade -y \
@@ -11,6 +13,8 @@ RUN sed -i -e 's/^APT/# APT/' -e 's/^DPkg/# DPkg/' \
         curl \
         wget \
         sudo \
+        libgl1-mesa-dev \
+        libopencv-dev \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # 作業ディレクトリ
@@ -25,10 +29,13 @@ RUN curl -L -O "https://github.com/conda-forge/miniforge/releases/download/25.3.
 ENV PATH=/root/conda/bin:$PATH
 
 # conda環境を作成
-COPY requirements.txt .
+COPY ./requirements.txt /workspace/
+COPY ./pyproject.toml /workspace/
+COPY ./src /workspace/src
+
 RUN conda create -n pt271slr python=3.10 -y \
  && echo "source /root/conda/bin/activate pt271slr" >> /root/.bashrc \
- && /bin/bash -c "source /root/conda/bin/activate pt271slr && pip install -r requirements.txt"
+ && /bin/bash -c "source /root/conda/bin/activate pt271slr && pip install -r requirements.txt && pip install -e ."
 
 RUN echo ". /root/conda/etc/profile.d/conda.sh" >> /root/.bashrc \
  && echo "conda activate pt271slr" >> /root/.bashrc

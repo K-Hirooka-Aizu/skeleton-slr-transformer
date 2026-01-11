@@ -1,7 +1,9 @@
-/data/**/
+/data/*/
 __pycache__
 *.old
 
 /outputs/
 /models/
+/features/
+/images/
 !*.md
