@@ -1,1 +1,3 @@
 model_name: s3d
+model_args:
+  pretrained: true
