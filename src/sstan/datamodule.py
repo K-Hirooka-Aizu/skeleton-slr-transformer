@@ -302,18 +302,20 @@ class JSL0LightningDataModule(L.LightningDataModule):
     
 
 def collate_fn(batch, num_classes):
-    data, label = list(zip(*batch))
+    data = torch.stack([b["skeleton_data"] for b in batch])
+    label = torch.tensor([b["label"] for b in batch], dtype=torch.long)
 
-    data = torch.stack(data)
-    label = torch.tensor(label,dtype=torch.long)
-    
-    if label.dim()==1:
-        label_onehot = torch.nn.functional.one_hot(label, num_classes=num_classes).float()
-    else:
-        label_onehot = label
+    if label.dim() == 1:
+        label = torch.nn.functional.one_hot(
+            label, num_classes=num_classes
+        ).float()
 
-    data, label_onehot = JointMixAug(data, label_onehot)
-    return data, label_onehot
+    data, label = JointMixAug(data, label)
+
+    return {
+        "skeleton_data": data,
+        "label": label
+    }
 
 class WLASLVideolightningDataModule(L.LightningDataModule):
     def __init__(self,subset:str, seq_len:int=50, num_copies:int=4, sampling_strategy:dict[str,str]={"train":"rnd_start"}, transforms_config:OmegaConf|None=None, batch_size:int=16, pin_memory:bool=False, num_workers:int=4):

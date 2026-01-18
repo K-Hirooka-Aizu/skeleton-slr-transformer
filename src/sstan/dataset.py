@@ -62,7 +62,7 @@ class Sign_Dataset(Dataset):
         
         # y = torch.Tensor(gloss_cat).to(torch.int64)
         y = gloss_cat
-        return x, y
+        return {"skeleton_data":x, "label":y}
 
     def _make_dataset(self, index_file_path, split):
         with open(index_file_path, 'r') as f:
@@ -259,7 +259,7 @@ class WLASL_Dataset(Dataset):
         
         y = gloss_cat
 
-        return x, y
+        return {"skeleton_data":x, "label":y}
         
     def _make_dataset(self, index_file_path, split):
         with open(index_file_path, 'r') as f:
@@ -425,8 +425,8 @@ class KSL0_Skeleton_Dataset(Dataset):
             data = augment_skeleton(data)
         
         # data = data[:-1]
-
-        return torch.tensor(data,dtype=torch.float32), label
+        x, y = torch.tensor(data,dtype=torch.float32), label
+        return {"skeleton_data":x, "label":y}
 
     def get_pose_data(self,json_data,selected_frame):
         data = list()
@@ -541,7 +541,10 @@ class JSLV2_Skeleton_Dataset(Dataset):
         if self.augmentation:
             data = augment_skeleton(data)
 
-        return torch.tensor(data,dtype=torch.float32), label
+        x, y =  torch.tensor(data,dtype=torch.float32), label
+        
+        return {"skeleton_data":x, "label":y}
+
 
     def get_pose_data(self,json_data,selected_frame):
         data = list()
