@@ -10,6 +10,7 @@ import numpy as np
 import torch
 import torch.utils.data as data_utl
 from tqdm import tqdm
+import transformers
 
 # Type alias for the wlasl video dataset item structure : (vid, gloss, video_path, start_frame_index, end_frame_index)
 DatasetItem = Tuple[str, str, str, int, int]
@@ -68,7 +69,11 @@ class WLASLVideoDataset(data_utl.Dataset):
 
         if self.transforms:
             frames_tensor = self.transforms(frames_tensor)
-        return (frames_tensor, padding_mask), onehot_tensor
+        return {
+            "pixel_values": frames_tensor,
+            "label": onehot_tensor
+            }
+
 
     @staticmethod
     def _load_video(video_path:str, start_frame_index:int|None=None, end_frmae_index:int|None=None)->np.ndarray:
@@ -101,7 +106,7 @@ class WLASLVideoDataset(data_utl.Dataset):
             img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
             frames.append(img_rgb)
 
-        frames_ndarray = np.stack(frames,dtype=np.float32)
+        frames_ndarray = np.stack(frames,dtype=np.uint8)
 
         return frames_ndarray
     
@@ -283,6 +288,51 @@ def video_to_tensor(pic: np.ndarray) -> torch.Tensor:
     """
     return torch.from_numpy(pic.transpose([3, 0, 1, 2]))
 
+
+class WLASLVideoDatasetWithHuggingFace(WLASLVideoDataset):
+    def __init__(self,model_name:str = "", **kwargs):
+        super().__init__(**kwargs)
+
+        self.image_huggingface_image_processor = load_huggingface_image_processor(model_name)
+
+    def __getitem__(self, idx):
+        vid, gloss, video_path, start_frame_index, end_frame_index = self.samples[idx]
+
+        # one-hot encode
+        onehot_ndarray = np.identity(self.num_classes,dtype=np.float32)
+        onehot_tensor = torch.from_numpy(onehot_ndarray[WLASLVideoDataset.gloss2index[gloss]])
+
+        frames_ndarray = self._load_video(video_path=video_path, start_frame_index=start_frame_index, end_frmae_index=end_frame_index)
+        # print(f"{start_frame_index} ~ {end_frame_index}")
+        if self.sampling_strategy == 'rnd_start':
+            frames_to_sample = self.rand_start_sampling(0, end_frame_index-start_frame_index, self.seq_len)
+        elif self.sampling_strategy == 'seq':
+            frames_to_sample = self.sequential_sampling(0, end_frame_index-start_frame_index, self.seq_len)
+        elif self.sampling_strategy == 'k_copies':
+            frames_to_sample = self.k_copies_fixed_length_sequential_sampling(0, end_frame_index-start_frame_index, self.seq_len, self.num_copies)
+        else:
+            raise RuntimeError('Unimplemented sample strategy found: {}.'.format(self.sampling_strategy))
+
+        padding_mask = self.make_padding_mask(frames_to_sample)
+        padding_mask = torch.tensor(padding_mask, dtype=torch.bool)
+
+        frames_ndarray = frames_ndarray[frames_to_sample]
+        frames_tensor = self.image_huggingface_image_processor.preprocess(list(frames_ndarray),return_tensors="pt")
+
+
+        return {
+            "pixel_values": frames_tensor["pixel_values"].squeeze().permute(1,0,2,3),
+            "label": onehot_tensor
+            }
+
+def load_huggingface_image_processor(model_name):
+    image_processor = None
+    if "vivit" in model_name:
+        image_processor = transformers.VivitImageProcessor()
+    else:
+        raise RuntimeError(f"Model Name : {model_name} image processor is not defined.")
+    
+    return image_processor
 
 
 if __name__=="__main__":

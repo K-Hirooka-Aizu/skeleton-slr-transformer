@@ -63,8 +63,10 @@ class LightningModel(L.LightningModule):
             )
         return {"optimizer": optimizer, "lr_scheduler": scheduler}
     
-    def training_step(self, batch, batch_idx):
-        (video, mask), label = batch
+    def training_step(self, batch:dict, batch_idx):
+        video = batch["pixel_values"]
+        label = batch["label"]
+        mask = batch.get("mask")
 
         pred = self.model(video)
         loss = self.loss_fn(pred,label)
@@ -80,7 +82,9 @@ class LightningModel(L.LightningModule):
         self.train_metrics.reset()
     
     def validation_step(self, batch, batch_idx):
-        (video, mask), label = batch
+        video = batch["pixel_values"]
+        label = batch["label"]
+        mask = batch.get("mask")
 
         if self.valid_sampling_strategy=="k_copies":
             all_output = []
@@ -108,7 +112,9 @@ class LightningModel(L.LightningModule):
         self.valid_metrics.reset()
     
     def test_step(self, batch, batch_idx):
-        (video, mask), label = batch
+        video = batch["pixel_values"]
+        label = batch["label"]
+        mask = batch.get("mask")
 
         if self.valid_sampling_strategy=="k_copies":
             all_output = []

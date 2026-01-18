@@ -1,6 +1,7 @@
 from omegaconf import DictConfig
 import torch.nn as nn
 from torchvision.models.video import s3d, mvit_v2_s, r3d_18
+import transformers
 
 from .cnn.pytorch_i3d import InceptionI3d
 
@@ -28,5 +29,33 @@ def build_model(cfg:DictConfig, **kwargs):
             r3d_model = r3d_18(num_classes=cfg.data.num_classes)
         return r3d_model
     
+    elif "huggingface" in model_name:
+        if "vivit" in cfg.model.fuggingface_model_name:
+            model_config = transformers.VivitConfig(
+                num_channels=cfg.data.in_channels,
+                num_frames=cfg.data.seq_len,
+                num_labels=cfg.data.num_classes,
+            )
+            model = transformers.VivitForVideoClassification.from_pretrained(
+                cfg.model.fuggingface_model_name,
+                config=model_config,
+                ignore_mismatched_sizes=True
+            )
+
+            model = HuggingFaceModelWrapper(model)
+
+        return model
+    
     else:
         raise RuntimeError(f"Model_name [{model_name}] is not implemented.")
+
+
+class HuggingFaceModelWrapper(nn.Module):
+    def __init__(self, huggingface_model):
+        super().__init__()
+        self.backbone = huggingface_model
+
+    def forward(self, pixel_values):
+        pixel_values = pixel_values.permute(0,2,1,3,4)
+        outputs = self.backbone(pixel_values)
+        return outputs.logits
