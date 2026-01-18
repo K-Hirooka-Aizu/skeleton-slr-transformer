@@ -6,6 +6,8 @@ alembic==1.17.2
 antlr4-python3-runtime==4.9.3
 async-timeout==5.0.1
 attrs==25.3.0
+certifi==2026.1.4
+charset-normalizer==3.4.4
 colorlog==6.10.1
 contourpy==1.3.2
 cycler==0.12.1
@@ -15,6 +17,8 @@ frozenlist==1.7.0
 fsspec==2024.6.1
 greenlet==3.2.4
 grpcio==1.73.0
+hf-xet==1.2.0
+huggingface-hub==0.36.0
 hydra-core==1.3.2
 idna==3.10
 Jinja2==3.1.4
@@ -62,6 +66,9 @@ pytorch-lightning==1.9.5
 pytorch-lightning-bolts==0.3.2.post1
 pytz==2025.2
 PyYAML==6.0.2
+regex==2026.1.15
+requests==2.32.5
+safetensors==0.7.0
 scikit-learn==1.7.0
 scipy==1.15.3
 six==1.17.0
@@ -69,7 +76,9 @@ SQLAlchemy==2.0.44
 sympy==1.13.3
 tensorboard==2.19.0
 tensorboard-data-server==0.7.2
+termcolor==3.3.0
 threadpoolctl==3.6.0
+tokenizers==0.22.2
 tomli==2.3.0
 --extra-index-url https://download.pytorch.org/whl/cu128
 torch==2.7.1+cu128
@@ -77,8 +86,10 @@ torchaudio==2.7.1+cu128
 torchmetrics==1.7.3
 torchvision==0.22.1+cu128
 tqdm==4.67.1
+transformers==4.57.6
 triton==3.3.1
 typing_extensions==4.12.2
 tzdata==2025.2
+urllib3==2.6.3
 Werkzeug==3.1.3
 yarl==1.20.1
