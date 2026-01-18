@@ -64,7 +64,7 @@ class LightningModel(L.LightningModule):
         return {"optimizer": optimizer, "lr_scheduler": scheduler}
     
     def training_step(self, batch, batch_idx):
-        data, label = batch
+        data, label = batch["skeleton_data"], batch["label"]
 
         pred = self.model(data)
         loss = self.loss_fn(pred,label)
@@ -80,7 +80,7 @@ class LightningModel(L.LightningModule):
         self.train_metrics.reset()
     
     def validation_step(self, batch, batch_idx):
-        data, label = batch
+        data, label = batch["skeleton_data"], batch["label"]
 
         if self.valid_sampling_strategy=="k_copies":
             all_output = []
@@ -108,7 +108,7 @@ class LightningModel(L.LightningModule):
         self.valid_metrics.reset()
     
     def test_step(self, batch, batch_idx):
-        data, label = batch
+        data, label = batch["skeleton_data"], batch["label"]
 
         if self.valid_sampling_strategy=="k_copies":
             all_output = []
