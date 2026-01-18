@@ -172,25 +172,30 @@ class SpatialTemporalTransformer(nn.Module):
         for _,stochastic_depth_rate in zip(range(n_blocks),np.linspace(0.0,self.max_stochastic_depth_rate,n_blocks))])
         self.fc = nn.Linear(embedding_dim,num_classes,bias=self.bias)
 
-    def forward(self,input:torch.Tensor) -> torch.Tensor:
+    def forward(self, skeleton_data:torch.Tensor, **kwargs) -> torch.Tensor:
         """
         forward process
 
-        args:
-        x : (batch, feature, time, vertex, body)
+        Parameters
+        ----------
+        skeleton_data : (batch, feature, time, vertex, body)
         """
-        x = input
+        x = skeleton_data
         x = self.extract_feature(x)
         x = torch.squeeze(F.adaptive_avg_pool3d(x,1))
         pred = self.fc(x)
         return pred
 
-    def extract_feature(self,x:torch.Tensor, mask=None) -> torch.Tensor:
+    def extract_feature(self,skeleton_data:torch.Tensor, mask=None, **kwargs) -> torch.Tensor:
         """
-        x : (batch, feature, time, vertex, body)
+        feature extraction function.
+
+        Parameters
+        ----------
+        skeleton_data : (batch, feature, time, vertex, body)
         """
-        B,C,T,V,M = x.size()
-        x = x.transpose(1,-1).contiguous().view(-1,T,V,C)
+        B,C,T,V,M = skeleton_data.size()
+        x = skeleton_data.transpose(1,-1).contiguous().view(-1,T,V,C)
 
         x = self.embedding(x)
 
@@ -264,21 +269,29 @@ class SpatialTemporalTransformerWithClassToken(nn.Module):
         self.fc = nn.Linear(self.embedding_dim,num_classes,bias=self.bias)
 
 
-    def forward(self,input:torch.Tensor) -> torch.Tensor:
+    def forward(self,skeleton_data:torch.Tensor, **kwargs) -> torch.Tensor:
         """
+        forward function.
+
+        Parameters
+        ----------
         x : (batch, feature, time, vertex, body)
         """
-        x = input
+        x = skeleton_data
         x = self.extract_feature(x)
         pred = self.fc(x)
         return pred
 
-    def extract_feature(self,x:torch.Tensor, mask=None) -> torch.Tensor:
+    def extract_feature(self, skeleton_data:torch.Tensor, mask=None, **kwargs) -> torch.Tensor:
         """
-        x : (batch, feature, time, vertex, body)
+        feature extraction function.
+
+        Parameters
+        ----------
+        skeleton_data : (batch, feature, time, vertex, body)
         """
-        B,C,T,V,M = x.size()
-        x = x.transpose(1,-1).contiguous().view(-1,T,V,C)
+        B,C,T,V,M = skeleton_data.size()
+        x = skeleton_data.transpose(1,-1).contiguous().view(-1,T,V,C)
 
         x = self.embedding(x)
         cls_token = self.cls_token.expand(B*M,-1,V,-1)

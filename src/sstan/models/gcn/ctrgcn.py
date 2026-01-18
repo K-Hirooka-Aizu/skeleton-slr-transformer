@@ -316,7 +316,13 @@ class CTRGCN(nn.Module):
         else:
             self.drop_out = lambda x: x
 
-    def forward(self, x):
+    def forward(self, skeleton_data, **kwargs):
+        """
+        forward function
+        
+        :param skeleton_data: (batch, channels, time, vertex, body)
+        """
+        x = skeleton_data
         if len(x.shape) == 3:
             N, T, VC = x.shape
             x = x.view(N, T, self.num_point, -1).permute(0, 3, 1, 2).contiguous().unsqueeze(-1)

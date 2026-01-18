@@ -211,21 +211,29 @@ class PreNormSpatialTemporalTransformerWithClassToken(nn.Module):
         self.fc = nn.Linear(self.embedding_dim,num_classes,bias=self.bias)
 
 
-    def forward(self,input:torch.Tensor) -> torch.Tensor:
+    def forward(self,skeleton_data:torch.Tensor, **kwargs) -> torch.Tensor:
         """
-        x : (batch, feature, time, vertex, body)
+        forward function.
+
+        Parameters
+        ----------
+        skeleton_data : (batch, feature, time, vertex, body)
         """
-        x = input
+        x = skeleton_data
         x = self.extract_feature(x)
         pred = self.fc(x)
         return pred
 
-    def extract_feature(self,x:torch.Tensor, mask=None) -> torch.Tensor:
+    def extract_feature(self, skeleton_data:torch.Tensor, mask=None, **kwargs) -> torch.Tensor:
         """
-        x : (batch, feature, time, vertex, body)
+        feature extraction function.
+
+        Parameters
+        ----------
+        skeleton_data : (batch, feature, time, vertex, body)
         """
-        B,C,T,V,M = x.size()
-        x = x.transpose(1,-1).contiguous().view(-1,T,V,C)
+        B,C,T,V,M = skeleton_data.size()
+        x = skeleton_data.transpose(1,-1).contiguous().view(-1,T,V,C)
 
         x = self.embedding(x)
         cls_token = self.cls_token.expand(B*M,-1,V,-1)

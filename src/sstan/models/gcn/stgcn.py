@@ -215,11 +215,17 @@ class STGCN(nn.Module):
         # fcn for prediction
         self.fcn = nn.Conv2d(256, num_class, kernel_size=1)
 
-    def forward(self, x):
-        # data normalization
-        N, C, T, V, M = x.size()
+    def forward(self, skeleton_data:torch.Tensor, **kwargs):
+        """
+        forward function
         
-        x  = self.extract(x)
+        :param skeleton_data: (batch, channels, time, vertex, body)
+        :type skeleton_data: torch.Tensor
+        """
+        # data normalization
+        N, C, T, V, M = skeleton_data.size()
+        
+        x  = self.extract(skeleton_data)
 
         # prediction
         x = self.fcn(x)
@@ -227,10 +233,16 @@ class STGCN(nn.Module):
 
         return x
     
-    def extract(self,x):
+    def extract(self, skeleton_data:torch.Tensor, **kwargs):
+        """
+        feature extraction function
+
+        :param skeleton_data: (batch, channels, time, vertex, body)
+        :type skeleton_data: torch.Tensor
+        """
         # data normalization
-        N, C, T, V, M = x.size()
-        x = x.permute(0, 4, 3, 1, 2).contiguous()
+        N, C, T, V, M = skeleton_data.size()
+        x = skeleton_data.permute(0, 4, 3, 1, 2).contiguous()
         x = x.view(N * M, V * C, T)
         x = self.data_bn(x)
         x = x.view(N, M, V, C, T)
@@ -251,8 +263,14 @@ class STGCN_MOT(STGCN):
     def __init__(self,**kwargs):
         super().__init__(**kwargs)
 
-    def forward(self,x):
-        mot = x[:,:,1:] - x[:,:,:-1]
+    def forward(self,skeleton_data:torch.Tensor, **kwargs):
+        """
+        forward function
+        
+        :param skeleton_data: (batch, channles, time, vertex, body)
+        :type skeleton_data: torch.Tensor
+        """
+        mot = skeleton_data[:,:,1:] - skeleton_data[:,:,:-1]
         x = super().forward(x)
         return x
 
@@ -265,9 +283,15 @@ class TwoStreamSTGCN(nn.Module):
 
         self.fcn = nn.Conv2d(256*2, kwargs["num_class"], kernel_size=1)
 
-    def forward(self,x):
-        pts = x
-        mot = x[:,:,1:] - x[:,:,:-1]
+    def forward(self,skeleton_data:torch.Tensor, **kwargs):
+        """
+        forward
+        
+        :param skeleton_data: (batch, channles, time, vertex, body)
+        :type skeleton_data: torch.Tensor
+        """
+        pts = skeleton_data
+        mot = skeleton_data[:,:,1:] - skeleton_data[:,:,:-1]
 
         x = torch.cat([self.stgcn1.extract(pts),self.stgcn2.extract(mot)],dim=1)
 
