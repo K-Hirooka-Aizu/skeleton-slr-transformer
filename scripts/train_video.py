@@ -15,7 +15,7 @@ from omegaconf import DictConfig
 
 # My library
 from sstan.datamodule import build_lightning_data_module
-from sstan.models import build_model
+from sstan.models import build_video_model
 
 class LightningModel(L.LightningModule):
     def __init__(self,model:nn.Module,cfg:DictConfig):
@@ -63,10 +63,12 @@ class LightningModel(L.LightningModule):
             )
         return {"optimizer": optimizer, "lr_scheduler": scheduler}
     
-    def training_step(self, batch, batch_idx):
-        data, label = batch["skeleton_data"], batch["label"]
+    def training_step(self, batch:dict, batch_idx):
+        video = batch["pixel_values"]
+        label = batch["label"]
+        mask = batch.get("mask")
 
-        pred = self.model(data)
+        pred = self.model(video)
         loss = self.loss_fn(pred,label)
 
         self.log("train_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
@@ -80,21 +82,23 @@ class LightningModel(L.LightningModule):
         self.train_metrics.reset()
     
     def validation_step(self, batch, batch_idx):
-        data, label = batch["skeleton_data"], batch["label"]
+        video = batch["pixel_values"]
+        label = batch["label"]
+        mask = batch.get("mask")
 
         if self.valid_sampling_strategy=="k_copies":
             all_output = []
-            stride = data.size()[2] // self.num_copies 
+            stride = video.size()[2] // self.num_copies 
             for j in range(self.num_copies):
 
-                X_slice = data[:, :, j * stride: (j + 1) * stride]
+                X_slice = video[:, :, j * stride: (j + 1) * stride]
                 output = self.model(X_slice)
                 all_output.append(output)
 
             all_output = torch.stack(all_output, dim=1)
             pred = torch.mean(all_output, dim=1)
         else:
-            pred = self.model(data)
+            pred = self.model(video)
 
         loss = self.loss_fn(pred, label)
         self.log("valid_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
@@ -108,21 +112,23 @@ class LightningModel(L.LightningModule):
         self.valid_metrics.reset()
     
     def test_step(self, batch, batch_idx):
-        data, label = batch["skeleton_data"], batch["label"]
+        video = batch["pixel_values"]
+        label = batch["label"]
+        mask = batch.get("mask")
 
         if self.valid_sampling_strategy=="k_copies":
             all_output = []
-            stride = data.size()[2] // self.num_copies 
+            stride = video.size()[2] // self.num_copies 
             for j in range(self.num_copies):
 
-                X_slice = data[:, :, j * stride: (j + 1) * stride]
+                X_slice = video[:, :, j * stride: (j + 1) * stride]
                 output = self.model(X_slice)
                 all_output.append(output)
 
             all_output = torch.stack(all_output, dim=1)
             pred = torch.mean(all_output, dim=1)
         else:
-            pred = self.model(data)
+            pred = self.model(video)
 
         loss = self.loss_fn(pred,label)
         self.log("test_loss",loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
@@ -153,7 +159,7 @@ def train(cfg : DictConfig) -> None:
 
     datamodule = build_lightning_data_module(cfg)
     
-    model = build_model(cfg)
+    model = build_video_model(cfg)
     model = LightningModel(model,cfg)
 
     logger = TensorBoardLogger(output_dir, name=f"{cfg.model.model_name}__{cfg.data.dataset}")
@@ -172,7 +178,7 @@ def train(cfg : DictConfig) -> None:
         callbacks=[
             checkpoint_callback,
         ],
-        deterministic=True,
+        deterministic=False,
         )
     
     trainer.fit(model=model, datamodule=datamodule)

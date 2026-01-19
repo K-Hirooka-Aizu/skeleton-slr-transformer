@@ -79,10 +79,10 @@ class TransformerVariant1(nn.Module):
 
         self.fn = nn.Linear(embedding_dims, num_classes)
 
-    def forward(self, x:torch.Tensor):
+    def forward(self, skeleton_data:torch.Tensor, **kwargs):
 
-        B,C,T,V,M = x.size()
-        x = x.transpose(1,-1).contiguous().view(-1,T,V,C)
+        B,C,T,V,M = skeleton_data.size()
+        x = skeleton_data.transpose(1,-1).contiguous().view(-1,T,V,C)
         x = self.embedding(x) # (B*M, T, V, embed)
 
         x = x.view(-1, T, V * self.embedding_dims) # (B*M, T, V*embed)

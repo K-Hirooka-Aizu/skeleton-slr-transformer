@@ -1,12 +1,14 @@
 import os
 import json
 from functools import partial
+from typing import List, Dict, Any
 
 import numpy as np
 import torch
 from torch.utils.data import DataLoader
 import lightning as L
 from sklearn.model_selection import train_test_split
+from omegaconf import DictConfig, OmegaConf
 
 from .dataset import (
     Sign_Dataset,
@@ -15,6 +17,11 @@ from .dataset import (
     JSLV2_Skeleton_Dataset,
 )
 from .augmentation_tools import JointMixAug
+from .video_dataset import (
+    WLASLVideoDataset,
+    WLASLVideoDatasetWithHuggingFace
+)
+from .video_transforms import build_transforms_from_config
 
 def build_lightning_data_module(cfg):
     dataset_name = cfg.data.dataset
@@ -67,6 +74,30 @@ def build_lightning_data_module(cfg):
             num_workers=cfg.num_workers,
             seed=cfg.seed,
         )
+    elif dataset_name in ["wlasl100_rgb", "wlasl300_rgb", "wlasl1000_rgb", "wlasl2000_rgb"]:
+        return WLASLVideolightningDataModule(
+            subset=cfg.data.subset,
+            seq_len=cfg.data.seq_len,
+            num_copies=cfg.data.num_copies,
+            sampling_strategy=cfg.data.sampling_strategy,
+            transforms_config=cfg.data.transforms,
+            batch_size=cfg.batch_size,
+            pin_memory=cfg.pin_memory,
+            num_workers=cfg.num_workers
+        )
+    elif dataset_name in ["wlasl100_rgb_hf", "wlasl300_rgb_hf", "wlasl1000_rgb_hf", "wlasl2000_rgb_hf"]:
+        return WLASLVideoWithHuggingFacelightningDataModule(
+            huggingface_model_name=cfg.model.fuggingface_model_name,
+            subset=cfg.data.subset,
+            seq_len=cfg.data.seq_len,
+            num_copies=cfg.data.num_copies,
+            sampling_strategy=cfg.data.sampling_strategy,
+            transforms_config=cfg.data.transforms,
+            batch_size=cfg.batch_size,
+            pin_memory=cfg.pin_memory,
+            num_workers=cfg.num_workers
+        )
+
     else:
         raise RuntimeError(f"Dataset [{dataset_name}] is not implemented.")
 
@@ -83,8 +114,8 @@ class WLASLOpenposeLightningDataModule(L.LightningDataModule):
         self.pin_memory = pin_memory
         self.num_workers = num_workers
 
-        self.split_file =  '../data/official_wlasl/splits/{}.json'.format(subset)
-        self.pose_data_root = "../data/official_wlasl/pose_per_individual_videos"
+        self.split_file =  './data/official_wlasl/splits/{}.json'.format(subset)
+        self.pose_data_root = "./data/official_wlasl/pose_per_individual_videos"
 
         with open(self.split_file, 'r') as f:
             content = json.load(f)
@@ -127,8 +158,8 @@ class WLASLMMPoseLightningDataModule(L.LightningDataModule):
         self.pin_memory = pin_memory
         self.num_workers = num_workers
 
-        self.split_file =  '../data/official_wlasl/splits/{}.json'.format(subset)
-        self.pose_data_root = "../data/official_wlasl/skeleton_mmpose"
+        self.split_file =  './data/official_wlasl/splits/{}.json'.format(subset)
+        self.pose_data_root = "./data/official_wlasl/skeleton_mmpose"
 
         with open(self.split_file, 'r') as f:
             content = json.load(f)
@@ -284,15 +315,107 @@ class JSL0LightningDataModule(L.LightningDataModule):
     
 
 def collate_fn(batch, num_classes):
-    data, label = list(zip(*batch))
+    data = torch.stack([b["skeleton_data"] for b in batch])
+    label = torch.tensor([b["label"] for b in batch], dtype=torch.long)
 
-    data = torch.stack(data)
-    label = torch.tensor(label,dtype=torch.long)
+    if label.dim() == 1:
+        label = torch.nn.functional.one_hot(
+            label, num_classes=num_classes
+        ).float()
+
+    data, label = JointMixAug(data, label)
+
+    return {
+        "skeleton_data": data,
+        "label": label
+    }
+
+class WLASLVideolightningDataModule(L.LightningDataModule):
+    def __init__(self,subset:str, seq_len:int=50, num_copies:int=4, sampling_strategy:dict[str,str]={"train":"rnd_start"}, transforms_config:OmegaConf|None=None, batch_size:int=16, pin_memory:bool=False, num_workers:int=4):
+        super().__init__()
+        self.subset = subset
+        self.seq_len = seq_len
+        self.num_copies = num_copies
+        self.sampling_strategy = sampling_strategy
+
+        self.batch_size = batch_size
+        self.pin_memory = pin_memory
+        self.num_workers = num_workers
+
+        self.split_file =  './data/official_wlasl/splits/{}.json'.format(subset)
+        self.video_dir_path = "./data/official_wlasl/video"
+
+        with open(self.split_file, 'r') as f:
+            content = json.load(f)
+        glosses = sorted(np.unique([gloss_entry['gloss'] for gloss_entry in content]))
+
+        self.num_classes = len(glosses)
+
+        self.transforms_dict = {
+            "train":build_transforms_from_config(transforms_config.train),
+            "val":build_transforms_from_config(transforms_config.val),
+            "test":build_transforms_from_config(transforms_config.test),
+        }
+
+    def setup(self, stage):
+        self.train_dataset = WLASLVideoDataset(split_file_path=self.split_file, video_dir_path=self.video_dir_path, split="train", seq_len=self.seq_len, num_copies=self.num_copies, sampling_strategy=self.sampling_strategy["train"], transforms=self.transforms_dict["train"])
+        self.valid_dataset = WLASLVideoDataset(split_file_path=self.split_file, video_dir_path=self.video_dir_path, split="val", seq_len=self.seq_len, num_copies=self.num_copies, sampling_strategy=self.sampling_strategy["valid"], transforms=self.transforms_dict["val"])
+        self.test_dataset = WLASLVideoDataset(split_file_path=self.split_file, video_dir_path=self.video_dir_path, split="test", seq_len=self.seq_len, num_copies=self.num_copies, sampling_strategy=self.sampling_strategy["test"], transforms=self.transforms_dict["test"])
+
+    def train_dataloader(self):
+        return DataLoader(self.train_dataset, batch_size=self.batch_size, shuffle=True, num_workers=self.num_workers, pin_memory=self.pin_memory, drop_last=True)
+
+    def val_dataloader(self):
+        return DataLoader(self.valid_dataset, batch_size=self.batch_size, shuffle=False, num_workers=self.num_workers, pin_memory=self.pin_memory, drop_last=False)
+
+    def test_dataloader(self):
+        return DataLoader(self.test_dataset, batch_size=self.batch_size, shuffle=False, num_workers=self.num_workers, pin_memory=self.pin_memory, drop_last=False)
+
+    def predict_dataloader(self):
+        return DataLoader(self.test_dataset, batch_size=self.batch_size, shuffle=False, num_workers=self.num_workers, pin_memory=self.pin_memory, drop_last=False)
     
-    if label.dim()==1:
-        label_onehot = torch.nn.functional.one_hot(label, num_classes=num_classes).float()
-    else:
-        label_onehot = label
+class WLASLVideoWithHuggingFacelightningDataModule(L.LightningDataModule):
+    def __init__(self,huggingface_model_name:str, subset:str, seq_len:int=50, num_copies:int=4, sampling_strategy:dict[str,str]={"train":"rnd_start"}, transforms_config:OmegaConf|None=None, batch_size:int=16, pin_memory:bool=False, num_workers:int=4):
+        super().__init__()
+        self.huggingface_model_name = huggingface_model_name
+        self.subset = subset
+        self.seq_len = seq_len
+        self.num_copies = num_copies
+        self.sampling_strategy = sampling_strategy
 
-    data, label_onehot = JointMixAug(data, label_onehot)
-    return data, label_onehot
+        self.batch_size = batch_size
+        self.pin_memory = pin_memory
+        self.num_workers = num_workers
+
+        self.split_file =  './data/official_wlasl/splits/{}.json'.format(subset)
+        self.video_dir_path = "./data/official_wlasl/video"
+
+        with open(self.split_file, 'r') as f:
+            content = json.load(f)
+        glosses = sorted(np.unique([gloss_entry['gloss'] for gloss_entry in content]))
+
+        self.num_classes = len(glosses)
+
+        self.transforms_dict = {
+            "train":build_transforms_from_config(transforms_config.train),
+            "val":build_transforms_from_config(transforms_config.val),
+            "test":build_transforms_from_config(transforms_config.test),
+        }
+
+    def setup(self, stage):
+        self.train_dataset = WLASLVideoDatasetWithHuggingFace(model_name=self.huggingface_model_name, split_file_path=self.split_file, video_dir_path=self.video_dir_path, split="train", seq_len=self.seq_len, num_copies=self.num_copies, sampling_strategy=self.sampling_strategy["train"], transforms=self.transforms_dict["train"])
+        self.valid_dataset = WLASLVideoDatasetWithHuggingFace(model_name=self.huggingface_model_name, split_file_path=self.split_file, video_dir_path=self.video_dir_path, split="val", seq_len=self.seq_len, num_copies=self.num_copies, sampling_strategy=self.sampling_strategy["valid"], transforms=self.transforms_dict["val"])
+        self.test_dataset = WLASLVideoDatasetWithHuggingFace(model_name=self.huggingface_model_name, split_file_path=self.split_file, video_dir_path=self.video_dir_path, split="test", seq_len=self.seq_len, num_copies=self.num_copies, sampling_strategy=self.sampling_strategy["test"], transforms=self.transforms_dict["test"])
+
+    def train_dataloader(self):
+        return DataLoader(self.train_dataset, batch_size=self.batch_size, shuffle=True, num_workers=self.num_workers, pin_memory=self.pin_memory, drop_last=True)
+
+    def val_dataloader(self):
+        return DataLoader(self.valid_dataset, batch_size=self.batch_size, shuffle=False, num_workers=self.num_workers, pin_memory=self.pin_memory, drop_last=False)
+
+    def test_dataloader(self):
+        return DataLoader(self.test_dataset, batch_size=self.batch_size, shuffle=False, num_workers=self.num_workers, pin_memory=self.pin_memory, drop_last=False)
+
+    def predict_dataloader(self):
+        return DataLoader(self.test_dataset, batch_size=self.batch_size, shuffle=False, num_workers=self.num_workers, pin_memory=self.pin_memory, drop_last=False)
+    

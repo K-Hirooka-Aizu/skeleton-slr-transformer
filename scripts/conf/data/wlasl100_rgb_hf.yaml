@@ -1,0 +1,55 @@
+dataset: wlasl100_rgb_hf
+subset: asl100
+num_classes: 100
+in_channels: 3
+seq_len: 32
+num_copies: 4
+sampling_strategy:
+    train: rnd_start
+    valid: k_copies
+    test: k_copies
+transforms:
+  train:    
+    - name: "RandomAffineVideo"
+      args:
+        degrees: 15
+        translate: [0.1, 0.1]
+        scale: [0.9, 1.1]
+        shear: 5
+        
+    - name: "ResizeVideo"
+      args:
+        size: 256
+        
+    - name: "RandomCropVideo"
+      args:
+        size: 224
+        
+    - name: "NormalizeVideo"
+      args:
+        mean: [0.485, 0.456, 0.406]
+        std: [0.229, 0.224, 0.225]
+
+  val:    
+    - name: "ResizeVideo"
+      args:
+        size: 256
+    - name: "CenterCropVideo"
+      args:
+        size: 224
+    - name: "NormalizeVideo"
+      args:
+        mean: [0.485, 0.456, 0.406]
+        std: [0.229, 0.224, 0.225]
+
+  test:    
+    - name: "ResizeVideo"
+      args:
+        size: 256
+    - name: "CenterCropVideo"
+      args:
+        size: 224
+    - name: "NormalizeVideo"
+      args:
+        mean: [0.485, 0.456, 0.406]
+        std: [0.229, 0.224, 0.225]
