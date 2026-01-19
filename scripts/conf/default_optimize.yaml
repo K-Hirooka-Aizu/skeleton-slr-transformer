@@ -39,3 +39,12 @@ optuna:
   monitor: "valid_accuracy_PI@01"  # 監視するメトリクス (LightningModelのlog_dictキー)
   direction: "maximize"            # "maximize" (最大化) or "minimize" (最小化)
   log_dir: "logs/optuna_study"     # Optuna用のログ保存先
+  storage: "sqlite:///optuna_history.db"
+  study_name: null
+
+hydra:
+  run:
+    dir: ./outputs/${now:%Y-%m-%d}/${now:%H-%M-%S}
+  sweep:
+    dir: ./outputs/${now:%Y-%m-%d}/${now:%H-%M-%S}
+    subdir: ${hydra.job.override_dirname}
