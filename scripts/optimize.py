@@ -71,50 +71,74 @@ class LightningModel(L.LightningModule):
         return {"optimizer": optimizer, "lr_scheduler": scheduler}
     
     def training_step(self, batch, batch_idx):
-        data, label = batch
+        data, label = batch["skeleton_data"], batch["label"]
+
         pred = self.model(data)
         loss = self.loss_fn(pred,label)
+
         self.log("train_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+
         batch_value = self.train_metrics(pred, label.argmax(dim=-1) if label.dim() != 1 else label)
         self.log_dict(batch_value,logger=True,on_epoch=True)
+
         return loss
 
     def on_train_epoch_end(self):
         self.train_metrics.reset()
     
     def validation_step(self, batch, batch_idx):
-        data, label = batch
+        data, label = batch["skeleton_data"], batch["label"]
+
         if self.valid_sampling_strategy=="k_copies":
             all_output = []
             stride = data.size()[2] // self.num_copies 
             for j in range(self.num_copies):
+
                 X_slice = data[:, :, j * stride: (j + 1) * stride]
                 output = self.model(X_slice)
                 all_output.append(output)
+
             all_output = torch.stack(all_output, dim=1)
             pred = torch.mean(all_output, dim=1)
         else:
             pred = self.model(data)
 
         loss = self.loss_fn(pred, label)
-        
-        # --- ★ Optunaが監視するメトリクス ---
-        # "valid_loss" や "valid_accuracy_PI@01" などをログに記録する
         self.log("valid_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+
         self.valid_metrics.update(pred, label.argmax(dim=-1) if label.dim() != 1 else label)
+
         return loss
 
     def on_validation_epoch_end(self):
-        # valid_metrics.compute() の結果 (例: valid_accuracy_PI@01) が
-        # Optunaの監視対象 (cfg.optuna.monitor) と一致している必要があります
         self.log_dict(self.valid_metrics.compute(),logger=True,on_epoch=True)
         self.valid_metrics.reset()
     
-    # ... test_step, on_test_epoch_end は train.py と同様 ...
     def test_step(self, batch, batch_idx):
-        pass
+        data, label = batch["skeleton_data"], batch["label"]
+
+        if self.valid_sampling_strategy=="k_copies":
+            all_output = []
+            stride = data.size()[2] // self.num_copies 
+            for j in range(self.num_copies):
+
+                X_slice = data[:, :, j * stride: (j + 1) * stride]
+                output = self.model(X_slice)
+                all_output.append(output)
+
+            all_output = torch.stack(all_output, dim=1)
+            pred = torch.mean(all_output, dim=1)
+        else:
+            pred = self.model(data)
+
+        loss = self.loss_fn(pred,label)
+        self.log("test_loss",loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+
+        self.test_metrics.update(pred, label.argmax(dim=-1) if label.dim() != 1 else label)
+    
     def on_test_epoch_end(self):
-        pass
+        self.log_dict(self.test_metrics.compute(),logger=True,on_epoch=True)
+        self.test_metrics.reset()
 
 # --- train.py から fix_seed 関数をコピー ---
 def fix_seed(seed):
