@@ -274,18 +274,36 @@ class HyperparameterOptimizer:
         """
         OptunaのStudyを起動し、最適化を実行する
         """
-        # Pruner (枝刈り戦略) の設定
-        pruner = optuna.pruners.MedianPruner()
+        # 1. 現在のHydraの出力ディレクトリの絶対パスを取得
+        hydra_output_dir = hydra.core.hydra_config.HydraConfig.get().runtime.output_dir
+        
+        # 2. 保存先のDBパスを作成 (sqlite:///{絶対パス}/ファイル名)
+        # Linux/Macではスラッシュ4つ(sqlite:////...)、Windowsでは3つになりますが、
+        # このf-stringの書き方でOS問わず自動的に正しい形式になります。
+        db_url = f"sqlite:///{hydra_output_dir}/optuna_history.db"
+        
+        print(f"Optuna Database path: {db_url}")
+
+        # Prunerの設定
+        pruner = None
+        if self.base_cfg.optuna.pruner.enabled:
+            pruner = optuna.pruners.MedianPruner(**self.base_cfg.optuna.pruner.pruner_args)
         
         study = optuna.create_study(
             direction=self.direction,
-            pruner=pruner
+            pruner=pruner,
+            storage=db_url,  # ★ YAMLの値ではなく、ここで作ったパスを使う
+            study_name=self.base_cfg.optuna.get("study_name", None),
+            load_if_exists=True
         )
         
+        print(f"Start optimization. Study name: {study.study_name}")
+        print(f"Storage: {self.base_cfg.optuna.storage}")
+
         study.optimize(
             self.objective, 
             n_trials=self.base_cfg.optuna.n_trials,
-            timeout=None # 時間制限 (秒) も可能
+            timeout=None
         )
         
         print("--- Optimization finished ---")
@@ -295,9 +313,17 @@ class HyperparameterOptimizer:
         print("  Params: ")
         for key, value in best.params.items():
             print(f"    {key}: {value}")
-            
-        return study
 
+        # --- ★変更点2: CSVデータセットとして保存 ---
+        # 全トライアルの結果をPandas DataFrameとして取得
+        df = study.trials_dataframe()
+        
+        # 保存ファイル名 (Hydraの出力ディレクトリに保存されます)
+        csv_path = "optuna_results.csv"
+        df.to_csv(csv_path, index=False)
+        print(f"Optimization results saved to: {csv_path}")
+
+        return study
 
 # --- Hydraによるスクリプト実行 ---
 # config_path は train.py と同じ場所を指定
