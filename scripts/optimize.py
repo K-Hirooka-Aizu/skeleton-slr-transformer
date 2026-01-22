@@ -285,7 +285,9 @@ class HyperparameterOptimizer:
         print(f"Optuna Database path: {db_url}")
 
         # Prunerの設定
-        pruner = optuna.pruners.MedianPruner(n_startup_trials=5, n_warmup_steps=5)
+        pruner = None
+        if self.base_cfg.optuna.pruner.enabled:
+            pruner = optuna.pruners.MedianPruner(**self.base_cfg.optuna.pruner.pruner_args)
         
         study = optuna.create_study(
             direction=self.direction,

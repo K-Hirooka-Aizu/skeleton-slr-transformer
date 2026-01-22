@@ -7,7 +7,7 @@ defaults:
  - model: transformer
  - search_space: step1
 
-epochs: 500
+epochs: 1500
 batch_size: 16
 label_smooting: 0.05
 accum_iter: 16
@@ -35,12 +35,19 @@ topk: [1,5,10]
 
 # Optunaによる最適化の基本設定
 optuna:
-  n_trials: 50                     # 試行回数
+  n_trials: 100                     # 試行回数
   monitor: "valid_accuracy_PI@01"  # 監視するメトリクス (LightningModelのlog_dictキー)
   direction: "maximize"            # "maximize" (最大化) or "minimize" (最小化)
   log_dir: "logs/optuna_study"     # Optuna用のログ保存先
   storage: "sqlite:///optuna_history.db"
   study_name: null
+
+  pruner:
+    enabled: true
+    pruner_args:
+      n_startup_trials: 10
+      n_warmup_steps: 300
+
 
 hydra:
   run:
