@@ -62,7 +62,7 @@ class WLASLVideoDataset(data_utl.Dataset):
         padding_mask = self.make_padding_mask(frames_to_sample)
         padding_mask = torch.tensor(padding_mask, dtype=torch.bool)
 
-        frames_ndarray = frames_ndarray[frames_to_sample]
+        frames_ndarray = frames_ndarray[frames_to_sample].astype(np.float32)
 
         frames_ndarray /= 255.
         frames_tensor = video_to_tensor(frames_ndarray)
