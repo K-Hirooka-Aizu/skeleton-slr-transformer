@@ -4,6 +4,7 @@ model_args:
     n_blocks: 10
     head_dim: 64
     n_heads: 8
+    norm_type: batchnorm
     ffn_expand_ratio: 4.0
     ffn_dropout_ratio: 0.25
     max_stochastic_depth_rate: 0.25

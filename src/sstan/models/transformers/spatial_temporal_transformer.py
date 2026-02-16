@@ -35,55 +35,13 @@ class B2TPostNormSpatialTemporalTransformerBlock(nn.Module):
         super().__init__()
         
         self.multihead_self_attention1=MultiHeadSelfAttention(input_dim,head_dim,n_heads,bias=bias)
-        self.norm_layer1 = norm_layer(input_dim) if norm_layer is nn.BatchNorm2d else norm_layer([seq_len, n_joints, input_dim])
+        self.norm_layer1 = norm_layer(input_dim) if norm_layer is nn.BatchNorm2d else norm_layer(input_dim)
         
         self.multihead_self_attention2=RelativePositionalEncodeMultiHeadSelfAttention(input_dim,head_dim,n_heads,seq_len,bias=bias)
-        self.norm_layer2 = norm_layer(input_dim) if norm_layer is nn.BatchNorm2d else norm_layer([n_joints, seq_len, input_dim])
+        self.norm_layer2 = norm_layer(input_dim) if norm_layer is nn.BatchNorm2d else norm_layer(input_dim)
         
         self.feed_forward_network = FeedForwardNetwork(input_dim,ffn_expand_ratio,ffn_dropout_ratio,bias)
-        self.norm_layer3 = norm_layer(input_dim) if norm_layer is nn.BatchNorm2d else norm_layer([seq_len, n_joints, input_dim])
-
-        self.stochastic_depth = torchvision.ops.StochasticDepth(stochastic_depth_rate,mode="row") if stochastic_depth_rate > 0 else nn.Identity()
-
-    def forward(self,input:torch.Tensor, mask=None)->torch.Tensor:
-        """
-            inputs:
-                input : (batch, * , seq_len[temporal], vertex[spatial], feature)
-            returns:
-                x : the shape is same as input
-        """
-        input_shape = input.size()
-
-        # spatial self-attention
-        z, _ = self.multihead_self_attention1(input, mask)
-        x = input + self.stochastic_depth(z)
-        x = self.norm_layer1(x) if isinstance(self.norm_layer1,nn.LayerNorm) else self.norm_layer1(x.transpose(-1,1)).transpose(-1,1)
-
-        # temporal self-attention
-        x = x.transpose(-2,-3).contiguous()
-        z, _ = self.multihead_self_attention2(x, mask.transpose(-1,-2)) if mask != None else self.multihead_self_attention2(x)
-        x = x + self.stochastic_depth(z)
-        x = self.norm_layer2(x) if isinstance(self.norm_layer2,nn.LayerNorm) else self.norm_layer2(x.transpose(-1,1)).transpose(-1,1)
-        x = x.transpose(-2,-3).contiguous()
-        
-        # feed forward network
-        x = x + self.stochastic_depth(self.feed_forward_network(x)) + input
-        x = self.norm_layer3(x) if isinstance(self.norm_layer3,nn.LayerNorm) else self.norm_layer3(x.transpose(-1,1)).transpose(-1,1)
-
-        return x
-
-class PostNormSpatialTemporalTransformerBlock(nn.Module):
-    def __init__(self,input_dim:int,head_dim:int,n_heads:int,seq_len:int,n_joints:int,ffn_expand_ratio:float=4.0,ffn_dropout_ratio:float=.3,norm_layer=nn.LayerNorm,stochastic_depth_rate=0.0,bias=False):
-        super().__init__()
-        
-        self.multihead_self_attention1=MultiHeadSelfAttention(input_dim,head_dim,n_heads,bias=bias)
-        self.norm_layer1 = norm_layer(input_dim) if norm_layer is nn.BatchNorm2d else norm_layer([seq_len, n_joints, input_dim])
-        
-        self.multihead_self_attention2=RelativePositionalEncodeMultiHeadSelfAttention(input_dim,head_dim,n_heads,seq_len,bias=bias)
-        self.norm_layer2 = norm_layer(input_dim) if norm_layer is nn.BatchNorm2d else norm_layer([n_joints, seq_len, input_dim])
-        
-        self.feed_forward_network = FeedForwardNetwork(input_dim,ffn_expand_ratio,ffn_dropout_ratio,bias)
-        self.norm_layer3 = norm_layer(input_dim) if norm_layer is nn.BatchNorm2d else norm_layer([seq_len, n_joints, input_dim])
+        self.norm_layer3 = norm_layer(input_dim) if norm_layer is nn.BatchNorm2d else norm_layer(input_dim)
 
         self.stochastic_depth = torchvision.ops.StochasticDepth(stochastic_depth_rate,mode="row") if stochastic_depth_rate > 0 else nn.Identity()
 
@@ -127,6 +85,7 @@ class SpatialTemporalTransformer(nn.Module):
         n_blocks:int,
         head_dim:int,
         n_heads:int,
+        norm_type:str = "batchnorm",
         ffn_expand_ratio:float=4.0,
         ffn_dropout_ratio:float=0.25,
         max_stochastic_depth_rate:float=0.25,
@@ -142,10 +101,14 @@ class SpatialTemporalTransformer(nn.Module):
         self.n_blocks=n_blocks
         self.head_dim=head_dim
         self.n_heads=n_heads
+        self.norm_type = norm_type
         self.ffn_expand_ratio = ffn_expand_ratio
         self.ffn_dropout_ratio = ffn_dropout_ratio
         self.max_stochastic_depth_rate=max_stochastic_depth_rate
         self.bias=True
+
+        if self.norm_type not in ["batchnorm","layernorm"]:
+            raise NotImplemented(f"norm_type should be assinged 'batchnorm' or 'layernorm'. {self.norm_type} is not available.")
 
         self.embedding = nn.Sequential(
             nn.Linear(in_channels,embedding_dim//2,bias=self.bias),
@@ -163,8 +126,7 @@ class SpatialTemporalTransformer(nn.Module):
                 n_joints=n_joints,
                 ffn_expand_ratio=self.ffn_expand_ratio,
                 ffn_dropout_ratio=self.ffn_dropout_ratio,
-                norm_layer=nn.BatchNorm2d,
-                # norm_layer=nn.LayerNorm,
+                norm_layer=nn.BatchNorm2d if self.norm_type == "batchnorm" else nn.LayerNorm,
                 stochastic_depth_rate=stochastic_depth_rate,
                 bias=self.bias,
                 
@@ -220,6 +182,7 @@ class SpatialTemporalTransformerWithClassToken(nn.Module):
         n_blocks:int,
         head_dim:int,
         n_heads:int,
+        norm_type:str = "batchnorm",
         ffn_expand_ratio:float=4.0,
         ffn_dropout_ratio:float=0.25,
         max_stochastic_depth_rate:float=0.25,
@@ -234,10 +197,14 @@ class SpatialTemporalTransformerWithClassToken(nn.Module):
         self.n_blocks=n_blocks
         self.head_dim=head_dim
         self.n_heads=n_heads
+        self.norm_type = norm_type
         self.ffn_expand_ratio = ffn_expand_ratio
         self.ffn_dropout_ratio = ffn_dropout_ratio
         self.max_stochastic_depth_rate=max_stochastic_depth_rate
         self.bias=True
+
+        if self.norm_type not in ["batchnorm","layernorm"]:
+            raise NotImplemented(f"norm_type should be assinged 'batchnorm' or 'layernorm'. {self.norm_type} is not available.")
 
         self.cls_token = nn.Parameter(torch.zeros(1,1,self.embedding_dim))
 
@@ -259,8 +226,7 @@ class SpatialTemporalTransformerWithClassToken(nn.Module):
                 n_joints=self.n_joints,
                 ffn_expand_ratio=self.ffn_expand_ratio,
                 ffn_dropout_ratio=self.ffn_dropout_ratio,
-                norm_layer=nn.BatchNorm2d,
-                # norm_layer=nn.LayerNorm,
+                norm_layer=nn.BatchNorm2d if self.norm_type == "batchnorm" else nn.LayerNorm,
                 stochastic_depth_rate=stochastic_depth_rate,
                 bias=self.bias,
             )
