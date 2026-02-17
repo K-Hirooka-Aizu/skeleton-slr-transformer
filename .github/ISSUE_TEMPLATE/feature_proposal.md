@@ -1,5 +1,5 @@
 ---
-name: 機能追加・改善提案 (Feature / Improvement)
+name:  Feature / Improvement (機能追加・改善提案)
 about: 新しいモデルの実装や、コードの効率化の提案
 title: "[Feat] "
 labels: enhancement
