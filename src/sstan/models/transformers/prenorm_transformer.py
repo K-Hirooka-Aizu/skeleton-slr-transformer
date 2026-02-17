@@ -88,8 +88,10 @@ class B2TPreNormSpatialTemporalTransformerBlock(PreNormSpatialTemporalTransforme
         x = x + self.stochastic_depth(_x)
         x = x.transpose(-2,-3).contiguous()
 
-
-        x = x + self.stochastic_depth(self.feed_forward_network(x)) + input
+        x = x + input
+        _x = self.norm_layer3(x)
+        _x = self.feed_forward_network(_x)
+        x = x + self.stochastic_depth(_x) 
 
         return x
 
