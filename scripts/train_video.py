@@ -157,7 +157,7 @@ def train(cfg : DictConfig) -> None:
     seed_everything(seed=cfg.seed, workers=True)
 
     output_dir = hydra.core.hydra_config.HydraConfig.get().runtime.output_dir
-    current_time = datetime.now().strftime("%YYYY-%mm-%dd_%HH-%MM-%SS")
+    current_time = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
 
     datamodule = build_lightning_data_module(cfg)
