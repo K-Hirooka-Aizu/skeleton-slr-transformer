@@ -4,7 +4,7 @@
 defaults:
  - _self_
  - data: wlasl100
- - model: tpostnorm_transformer
+ - model: postnorm_transformer
  - search_space: step1
 
 epochs: 1500
