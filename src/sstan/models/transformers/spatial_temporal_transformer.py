@@ -17,10 +17,10 @@ class FeedForwardNetwork(nn.Module):
         super().__init__()
 
         mid_channels = int(in_channels*expand_ratio)
-        self.linear_1 = nn.Linear(in_channels,mid_channels)
+        self.linear_1 = nn.Linear(in_channels,mid_channels, bias=bias)
         self.activation = nn.GELU()
         self.dropout = nn.Dropout(dropout_ratio) if dropout_ratio>0 else nn.Identity()
-        self.linear_2 = nn.Linear(mid_channels,in_channels)
+        self.linear_2 = nn.Linear(mid_channels,in_channels, bias=bias)
 
     def forward(self,x):
         x = self.linear_1(x)
@@ -89,6 +89,7 @@ class SpatialTemporalTransformer(nn.Module):
         ffn_expand_ratio:float=4.0,
         ffn_dropout_ratio:float=0.25,
         max_stochastic_depth_rate:float=0.25,
+        use_bias:bool = False,
         **kwargs
         ):
         super().__init__()
@@ -105,7 +106,7 @@ class SpatialTemporalTransformer(nn.Module):
         self.ffn_expand_ratio = ffn_expand_ratio
         self.ffn_dropout_ratio = ffn_dropout_ratio
         self.max_stochastic_depth_rate=max_stochastic_depth_rate
-        self.bias=True
+        self.bias=use_bias
 
         if self.norm_type not in ["batchnorm","layernorm"]:
             raise NotImplemented(f"norm_type should be assinged 'batchnorm' or 'layernorm'. {self.norm_type} is not available.")
@@ -186,6 +187,7 @@ class SpatialTemporalTransformerWithClassToken(nn.Module):
         ffn_expand_ratio:float=4.0,
         ffn_dropout_ratio:float=0.25,
         max_stochastic_depth_rate:float=0.25,
+        use_bias:bool=False,
         **kwargs):
         super().__init__()
 
@@ -201,7 +203,7 @@ class SpatialTemporalTransformerWithClassToken(nn.Module):
         self.ffn_expand_ratio = ffn_expand_ratio
         self.ffn_dropout_ratio = ffn_dropout_ratio
         self.max_stochastic_depth_rate=max_stochastic_depth_rate
-        self.bias=True
+        self.bias=use_bias
 
         if self.norm_type not in ["batchnorm","layernorm"]:
             raise NotImplemented(f"norm_type should be assinged 'batchnorm' or 'layernorm'. {self.norm_type} is not available.")
