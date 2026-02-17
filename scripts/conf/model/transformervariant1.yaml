@@ -1,8 +1,0 @@
-model_name: TransformerVariant1
-model_args:
-  embedding_dims: 128
-  n_blocks: 10
-  head_dims: 64
-  n_heads: 8
-  ffn_expand_ratio: 2.0
-  ffn_dropout_ratio: 0.3
