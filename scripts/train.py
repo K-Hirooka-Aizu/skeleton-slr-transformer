@@ -12,6 +12,7 @@ from lightning.pytorch import seed_everything
 from pl_bolts.optimizers.lr_scheduler import LinearWarmupCosineAnnealingLR
 import hydra
 from omegaconf import DictConfig
+from datetime import datetime
 
 # My library
 from sstan.datamodule import build_lightning_data_module
@@ -150,6 +151,7 @@ def train(cfg : DictConfig) -> None:
     seed_everything(seed=cfg.seed, workers=True)
 
     output_dir = hydra.core.hydra_config.HydraConfig.get().runtime.output_dir
+    current_time = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
     datamodule = build_lightning_data_module(cfg)
     
@@ -158,7 +160,7 @@ def train(cfg : DictConfig) -> None:
 
     logger = TensorBoardLogger(output_dir, name=f"{cfg.model.model_name}__{cfg.data.dataset}")
     checkpoint_callback = ModelCheckpoint(
-        dirpath=f"../models/{cfg.model.model_name}",
+        dirpath=f"./models/{current_time}/{cfg.model.model_name}",
         filename="{epoch}-{valid_loss:.4f}-{valid_accuracy_PI@01:.4f}",
         monitor="valid_accuracy_PI@01",
         mode="max",
