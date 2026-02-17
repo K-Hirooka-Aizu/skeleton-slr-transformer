@@ -1,6 +1,6 @@
 ---
 name: Reproduction Report(再現性・動作報告)
-about: 論文の結果が再現できない、またはエラーが出る場合の報告
+about: Reporting When Paper Results Cannot Be Reproduced or Errors Occur (論文の結果が再現できない、またはエラーが出る場合の報告)
 title: "[Repro] "
 labels: reproducibility, bug
 assignees: ''

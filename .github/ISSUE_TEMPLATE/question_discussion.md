@@ -1,6 +1,6 @@
 ---
 name:  Question / Discussion (質問・議論)
-about: 実装詳細や理論との対応についての質問
+about: Questions regarding implementation details and correspondence with theory (実装詳細や理論との対応についての質問)
 title: "[Question] "
 labels: question, discussion
 assignees: ''
