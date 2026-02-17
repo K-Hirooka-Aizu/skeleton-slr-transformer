@@ -17,10 +17,10 @@ class FeedForwardNetwork(nn.Module):
         super().__init__()
 
         mid_channels = int(in_channels*expand_ratio)
-        self.linear_1 = nn.Linear(in_channels,mid_channels)
+        self.linear_1 = nn.Linear(in_channels,mid_channels, bias=bias)
         self.activation = nn.GELU()
         self.dropout = nn.Dropout(dropout_ratio) if dropout_ratio>0 else nn.Identity()
-        self.linear_2 = nn.Linear(mid_channels,in_channels)
+        self.linear_2 = nn.Linear(mid_channels,in_channels, bias=bias)
 
     def forward(self,x):
         x = self.linear_1(x)
@@ -52,16 +52,48 @@ class PreNormSpatialTemporalTransformerBlock(nn.Module):
         """
         input_shape = input.size()
 
-        x = input + self.stochastic_depth(self.multihead_self_attention1(self.norm_layer1(input), mask)[0])
+        _x = self.norm_layer1(input)
+        _x, _  = self.multihead_self_attention1(_x, mask)
+        x = input + self.stochastic_depth(_x)
 
         x = x.transpose(-2,-3).contiguous()
-        x = x + self.stochastic_depth(self.multihead_self_attention2(self.norm_layer2(x), mask)[0])
+        _x = self.norm_layer2(x)
+        _x, _ = self.multihead_self_attention2(_x, mask)
+        x = x + self.stochastic_depth(_x)
         x = x.transpose(-2,-3).contiguous()
 
-        x = x + self.stochastic_depth(self.feed_forward_network(x))
+        _x = self.norm_layer3(x)
+        _x = self.feed_forward_network(_x)
+        x = x + self.stochastic_depth(_x)
 
         return x
+    
+class B2TPreNormSpatialTemporalTransformerBlock(PreNormSpatialTemporalTransformerBlock):
+    def forward(self,input:torch.Tensor, mask=None)->torch.Tensor:
+        """
+            inputs:
+                input : (batch, * , seq_len[temporal], vertex[spatial], feature)
+            returns:
+                x : the shape is same as input
+        """
+        input_shape = input.size()
 
+        _x = self.norm_layer1(input)
+        _x, _  = self.multihead_self_attention1(_x, mask)
+        x = input + self.stochastic_depth(_x)
+
+        x = x.transpose(-2,-3).contiguous()
+        _x = self.norm_layer2(x)
+        _x, _ = self.multihead_self_attention2(_x, mask)
+        x = x + self.stochastic_depth(_x)
+        x = x.transpose(-2,-3).contiguous()
+
+        x = x + input
+        _x = self.norm_layer3(x)
+        _x = self.feed_forward_network(_x)
+        x = x + self.stochastic_depth(_x) 
+
+        return x
 
 ###############################################################################   
 # latest main model
@@ -80,6 +112,7 @@ class PreNormSpatialTemporalTransformer(nn.Module):
         ffn_expand_ratio:float=4.0,
         ffn_dropout_ratio:float=0.25,
         max_stochastic_depth_rate:float=0.25,
+        use_bias:bool=False,
         **kwargs
         ):
         super().__init__()
@@ -95,12 +128,13 @@ class PreNormSpatialTemporalTransformer(nn.Module):
         self.ffn_expand_ratio = ffn_expand_ratio
         self.ffn_dropout_ratio = ffn_dropout_ratio
         self.max_stochastic_depth_rate=max_stochastic_depth_rate
-        self.bias=True
+        self.bias=use_bias
 
         self.embedding = nn.Sequential(
-            nn.Linear(in_channels,embedding_dim//2,bias=self.bias),
-            nn.Tanh(),
-            nn.Linear(embedding_dim//2,embedding_dim,bias=self.bias)
+            # nn.Linear(in_channels,embedding_dim//2,bias=self.bias),
+            # nn.Tanh(),
+            # nn.Linear(embedding_dim//2,embedding_dim,bias=self.bias)
+            nn.Linear(in_channels,self.embedding_dim,bias=self.bias)
         )
         self.spatial_positional_encode = SinusoidalPositionalEncoding(embedding_dim,n_joints)
 
@@ -168,6 +202,7 @@ class PreNormSpatialTemporalTransformerWithClassToken(nn.Module):
         ffn_expand_ratio:float=4.0,
         ffn_dropout_ratio:float=0.25,
         max_stochastic_depth_rate:float=0.25,
+        use_bias:bool=False,
         **kwargs):
         super().__init__()
 
@@ -182,19 +217,16 @@ class PreNormSpatialTemporalTransformerWithClassToken(nn.Module):
         self.ffn_expand_ratio = ffn_expand_ratio
         self.ffn_dropout_ratio = ffn_dropout_ratio
         self.max_stochastic_depth_rate=max_stochastic_depth_rate
-        self.bias=True
+        self.bias=use_bias
 
         self.cls_token = nn.Parameter(torch.zeros(1,1,self.embedding_dim))
 
         self.embedding = nn.Sequential(
-            nn.Linear(in_channels,self.embedding_dim//2,bias=self.bias),
-            nn.Tanh(),
-            nn.Linear(self.embedding_dim//2,self.embedding_dim,bias=self.bias)
+            nn.Linear(in_channels,self.embedding_dim,bias=self.bias)
         )
         self.spatial_positional_encode = SinusoidalPositionalEncoding(embedding_dim,n_joints)
 
         self.blocks = nn.ModuleList([
-            
             PreNormSpatialTemporalTransformerBlock(
                 input_dim = embedding_dim,
                 head_dim = head_dim,
