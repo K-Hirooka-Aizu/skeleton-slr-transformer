@@ -5,7 +5,6 @@ from .transformers import (
     SpatialTemporalTransformerWithClassToken,
     PreNormSpatialTemporalTransformer,
     PreNormSpatialTemporalTransformerWithClassToken,
-    TransformerVariant1,
 )
 from .gcn import(
     STGCN,
