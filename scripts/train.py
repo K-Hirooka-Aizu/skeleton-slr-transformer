@@ -1,4 +1,5 @@
 import random
+from datetime import datetime
 
 import numpy as np
 import torch
@@ -7,16 +8,18 @@ import torch.optim as optim
 import torchmetrics
 import lightning as L
 from lightning.pytorch.callbacks import ModelCheckpoint
-from lightning.pytorch.loggers import TensorBoardLogger
+from lightning.pytorch.loggers import WandbLogger, TensorBoardLogger
 from lightning.pytorch import seed_everything
 from pl_bolts.optimizers.lr_scheduler import LinearWarmupCosineAnnealingLR
 import hydra
-from omegaconf import DictConfig
-from datetime import datetime
+from omegaconf import DictConfig, OmegaConf
+from dotenv import load_dotenv
 
 # My library
 from sstan.datamodule import build_lightning_data_module
 from sstan.models import build_model
+
+load_dotenv()
 
 class LightningModel(L.LightningModule):
     def __init__(self,model:nn.Module,cfg:DictConfig):
@@ -150,7 +153,6 @@ def train(cfg : DictConfig) -> None:
     fix_seed(cfg.seed)
     seed_everything(seed=cfg.seed, workers=True)
 
-    output_dir = hydra.core.hydra_config.HydraConfig.get().runtime.output_dir
     current_time = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
     datamodule = build_lightning_data_module(cfg)
@@ -158,7 +160,18 @@ def train(cfg : DictConfig) -> None:
     model = build_model(cfg)
     model = LightningModel(model,cfg)
 
-    logger = TensorBoardLogger(output_dir, name=f"{cfg.model.model_name}__{cfg.data.dataset}")
+    wandb_kwargs = OmegaConf.to_container(cfg.wandb, resolve=True)
+
+    if wandb_kwargs.pop("enabled", False):
+        logger = WandbLogger(
+            **wandb_kwargs
+            )
+    else:
+        logger = TensorBoardLogger(
+            save_dir=hydra.core.hydra_config.HydraConfig.get().runtime.output_dir,
+            name=f"{cfg.model.model_name}__{cfg.data.dataset}"
+        )
+    
     checkpoint_callback = ModelCheckpoint(
         dirpath=f"./models/{current_time}/{cfg.model.model_name}",
         filename="{epoch}-{valid_loss:.4f}-{valid_accuracy_PI@01:.4f}",
@@ -180,6 +193,22 @@ def train(cfg : DictConfig) -> None:
     trainer.fit(model=model, datamodule=datamodule)
     trainer.validate(ckpt_path='best',datamodule=datamodule)
     trainer.test(ckpt_path='best',datamodule=datamodule)
+
+    best_score = checkpoint_callback.best_model_score
+
+    if best_score is not None:
+        best_score_val = best_score.item()
+        
+        if isinstance(logger, WandbLogger):
+            logger.experiment.summary["best_valid_accuracy_PI@01"] = best_score_val
+            
+        elif isinstance(logger, TensorBoardLogger):
+            cfg_dict = OmegaConf.to_container(cfg, resolve=True) if cfg else {}
+            
+            logger.log_hyperparams(
+                params=cfg_dict, 
+                metrics={"best_valid_accuracy_PI@01": best_score_val}
+            )
 
 
 if __name__=="__main__":
