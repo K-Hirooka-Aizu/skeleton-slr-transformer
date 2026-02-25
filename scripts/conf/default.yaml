@@ -29,6 +29,13 @@ pin_memory: true
 
 topk: [1,5,10]
 
+wandb:
+  enabled: true
+  project: exp-wlasl100
+  name: null
+  save_dir: ${hydra:runtime.output_dir}
+  tags: []
+
 hydra:
   run:
     dir: ./outputs/${now:%Y-%m-%d}/${now:%H-%M-%S}
