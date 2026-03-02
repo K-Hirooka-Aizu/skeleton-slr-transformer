@@ -32,9 +32,11 @@ topk: [1,5,10]
 wandb:
   enabled: true
   project: exp-wlasl100
-  name: null
+  name: ${hydra:job.override_dirname}
+  group: sweep_${now:%Y-%m-%d_%H-%M-%S}
   save_dir: ${hydra:runtime.output_dir}
   tags: []
+  reinit: true
 
 hydra:
   run:

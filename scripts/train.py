@@ -14,6 +14,7 @@ from pl_bolts.optimizers.lr_scheduler import LinearWarmupCosineAnnealingLR
 import hydra
 from omegaconf import DictConfig, OmegaConf
 from dotenv import load_dotenv
+import wandb
 
 # My library
 from sstan.datamodule import build_lightning_data_module
@@ -210,6 +211,7 @@ def train(cfg : DictConfig) -> None:
                 metrics={"best_valid_accuracy_PI@01": best_score_val}
             )
 
+    wandb.finish()
 
 if __name__=="__main__":
     train()
