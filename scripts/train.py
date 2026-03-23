@@ -62,10 +62,16 @@ class LightningModel(L.LightningModule):
         return self.model(x)
 
     def configure_optimizers(self):
-        optimizer = optim.AdamW(self.model.parameters(), lr=self.lr)
+        num_gpus = self.trainer.world_size
+        optimizer = optim.AdamW(self.model.parameters(), lr=self.lr*num_gpus)
+
         scheduler = LinearWarmupCosineAnnealingLR(
-            optimizer, warmup_epochs=self.warmup_epoch, max_epochs=self.epochs, warmup_start_lr=self.warmup_lr_init, eta_min=self.min_lr,  
-            )
+            optimizer, 
+            warmup_epochs=self.warmup_epoch, 
+            max_epochs=self.epochs, 
+            warmup_start_lr=self.warmup_lr_init * num_gpus,  
+            eta_min=self.min_lr * num_gpus
+        )
         return {"optimizer": optimizer, "lr_scheduler": scheduler}
     
     def training_step(self, batch, batch_idx):
@@ -74,10 +80,10 @@ class LightningModel(L.LightningModule):
         pred = self.model(data)
         loss = self.loss_fn(pred,label)
 
-        self.log("train_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+        self.log("train_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True, sync_dist=True)
 
         batch_value = self.train_metrics(pred, label.argmax(dim=-1) if label.dim() != 1 else label)
-        self.log_dict(batch_value,logger=True,on_epoch=True)
+        self.log_dict(batch_value,logger=True,on_epoch=True, sync_dist=True)
 
         return loss
 
@@ -102,14 +108,14 @@ class LightningModel(L.LightningModule):
             pred = self.model(data)
 
         loss = self.loss_fn(pred, label)
-        self.log("valid_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+        self.log("valid_loss", loss, on_step=True, on_epoch=True, prog_bar=True, logger=True,sync_dist=True)
 
         self.valid_metrics.update(pred, label.argmax(dim=-1) if label.dim() != 1 else label)
 
         return loss
 
     def on_validation_epoch_end(self):
-        self.log_dict(self.valid_metrics.compute(),logger=True,on_epoch=True)
+        self.log_dict(self.valid_metrics.compute(),logger=True,on_epoch=True,sync_dist=True)
         self.valid_metrics.reset()
     
     def test_step(self, batch, batch_idx):
@@ -130,12 +136,12 @@ class LightningModel(L.LightningModule):
             pred = self.model(data)
 
         loss = self.loss_fn(pred,label)
-        self.log("test_loss",loss, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+        self.log("test_loss",loss, on_step=True, on_epoch=True, prog_bar=True, logger=True,sync_dist=True)
 
         self.test_metrics.update(pred, label.argmax(dim=-1) if label.dim() != 1 else label)
     
     def on_test_epoch_end(self):
-        self.log_dict(self.test_metrics.compute(),logger=True,on_epoch=True)
+        self.log_dict(self.test_metrics.compute(),logger=True,on_epoch=True,sync_dist=True)
         self.test_metrics.reset()
 
 def fix_seed(seed):
@@ -189,6 +195,8 @@ def train(cfg : DictConfig) -> None:
             checkpoint_callback,
         ],
         deterministic=True,
+        devices="auto", 
+        strategy="ddp",
         )
     
     trainer.fit(model=model, datamodule=datamodule)
