@@ -6,11 +6,13 @@ import torch.optim as optim
 import torchmetrics
 import lightning as L
 from lightning.pytorch.callbacks import ModelCheckpoint
-from lightning.pytorch.loggers import TensorBoardLogger
+from lightning.pytorch.loggers import WandbLogger, TensorBoardLogger
 from lightning.pytorch import seed_everything
 from pl_bolts.optimizers.lr_scheduler import LinearWarmupCosineAnnealingLR
 import hydra
 from omegaconf import DictConfig, OmegaConf # OmegaConf を追加
+from dotenv import load_dotenv
+import wandb
 
 # Optuna / Pruning のためのインポート
 import optuna
@@ -19,6 +21,9 @@ from optuna.integration import PyTorchLightningPruningCallback
 # My library
 from sstan.datamodule import build_lightning_data_module
 from sstan.models import build_model
+
+load_dotenv()
+
 
 # --- train.py から LightningModel クラスをコピー ---
 class LightningModel(L.LightningModule):
@@ -219,11 +224,20 @@ class HyperparameterOptimizer:
 
             # 3. Loggerの設定
             # ログが混ざらないよう、トライアルごとに保存先を分ける
-            logger = TensorBoardLogger(
-                save_dir=self.base_cfg.optuna.log_dir, 
-                name=f"trial_{trial.number}", 
-                version=0
-            )
+            wandb_kwargs = OmegaConf.to_container(self.base_cfg.wandb, resolve=True)
+
+            if wandb_kwargs.pop("enabled", False):
+                logger = WandbLogger(
+                    **wandb_kwargs
+                    )
+            else:
+                logger = TensorBoardLogger(
+                    save_dir=hydra.core.hydra_config.HydraConfig.get().runtime.output_dir,
+                    name=f"{self.base_cfg.model.model_name}__{self.base_cfg.data.dataset}"
+                )
+
+            trial_cfg_dict = OmegaConf.to_container(trial_cfg, resolve=True)
+            logger.log_hyperparams(trial_cfg_dict)
 
             # 4. Optuna Pruning (枝刈り) Callback
             pruning_callback = PyTorchLightningPruningCallback(trial, monitor=self.monitor)
@@ -258,6 +272,8 @@ class HyperparameterOptimizer:
             if score is None:
                 print(f"Warning: Metric '{self.monitor}' not found. Returning worst score.")
                 return -1e9 if self.direction == "maximize" else 1e9
+            
+            logger.experiment.summary[f"best_{self.monitor}"] = score.item()
 
             return score.item()
 
@@ -269,6 +285,10 @@ class HyperparameterOptimizer:
             print(f"Trial {trial.number} failed with error: {e}")
             # エラーの場合は最悪のスコアを返す
             return -1e9 if self.direction == "maximize" else 1e9
+        
+        finally:
+            # ★ 追加: トライアルが終了（正常終了・枝刈り・エラー含む）したら、必ずW&BのRunを終了させる
+            wandb.finish()
 
     def run_optimization(self):
         """
