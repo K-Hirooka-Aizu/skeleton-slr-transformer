@@ -230,14 +230,16 @@ class HyperparameterOptimizer:
                 logger = WandbLogger(
                     **wandb_kwargs
                     )
+                
+                trial_cfg_dict = OmegaConf.to_container(trial_cfg, resolve=True)
+                logger.log_hyperparams(trial_cfg_dict)
+                
             else:
                 logger = TensorBoardLogger(
                     save_dir=hydra.core.hydra_config.HydraConfig.get().runtime.output_dir,
                     name=f"{self.base_cfg.model.model_name}__{self.base_cfg.data.dataset}"
                 )
 
-            trial_cfg_dict = OmegaConf.to_container(trial_cfg, resolve=True)
-            logger.log_hyperparams(trial_cfg_dict)
 
             # 4. Optuna Pruning (枝刈り) Callback
             pruning_callback = PyTorchLightningPruningCallback(trial, monitor=self.monitor)

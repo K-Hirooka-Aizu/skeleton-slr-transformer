@@ -173,6 +173,9 @@ def train(cfg : DictConfig) -> None:
         logger = WandbLogger(
             **wandb_kwargs
             )
+        
+        cfg_dict = OmegaConf.to_container(cfg, resolve=True)
+        logger.log_hyperparams(cfg_dict)
     else:
         logger = TensorBoardLogger(
             save_dir=hydra.core.hydra_config.HydraConfig.get().runtime.output_dir,
