@@ -32,7 +32,7 @@ topk: [1,5,10]
 wandb:
   enabled: true
   project: exp-wlasl100
-  name: ${hydra:job.override_dirname}
+  name: null
   group: sweep_${now:%Y-%m-%d_%H-%M-%S}
   save_dir: ${hydra:runtime.output_dir}
   tags: []
@@ -43,4 +43,4 @@ hydra:
     dir: ./outputs/${now:%Y-%m-%d}/${now:%H-%M-%S}
   sweep:
     dir: ./outputs/${now:%Y-%m-%d}/${now:%H-%M-%S}
-    subdir: ${hydra.job.override_dirname}
+    subdir: ${hydra.job.num}
