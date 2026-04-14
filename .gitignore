@@ -1,7 +1,7 @@
 /data/*/
 __pycache__
 *.old
-.vscode/
+/.vscode/
 
 .env
 
