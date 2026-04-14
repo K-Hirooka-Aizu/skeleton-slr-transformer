@@ -1,3 +1,0 @@
-model_name: r3d_18
-model_args:
-  pretrained: true
