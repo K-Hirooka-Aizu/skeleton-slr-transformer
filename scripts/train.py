@@ -1,5 +1,4 @@
 import random
-from datetime import datetime
 
 import numpy as np
 import torch
@@ -63,14 +62,17 @@ class LightningModel(L.LightningModule):
 
     def configure_optimizers(self):
         num_gpus = self.trainer.world_size
-        optimizer = optim.AdamW(self.model.parameters(), lr=self.lr*num_gpus)
+        # optimizer = optim.AdamW(self.model.parameters(), lr=self.lr*num_gpus)
+        optimizer = optim.AdamW(self.model.parameters(), lr=self.lr)
 
         scheduler = LinearWarmupCosineAnnealingLR(
             optimizer, 
             warmup_epochs=self.warmup_epoch, 
             max_epochs=self.epochs, 
-            warmup_start_lr=self.warmup_lr_init * num_gpus,  
-            eta_min=self.min_lr * num_gpus
+            # warmup_start_lr=self.warmup_lr_init * num_gpus,  
+            # eta_min=self.min_lr * num_gpus
+            warmup_start_lr=self.warmup_lr_init,  
+            eta_min=self.min_lr
         )
         return {"optimizer": optimizer, "lr_scheduler": scheduler}
     
@@ -160,8 +162,6 @@ def train(cfg : DictConfig) -> None:
     fix_seed(cfg.seed)
     seed_everything(seed=cfg.seed, workers=True)
 
-    current_time = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-
     datamodule = build_lightning_data_module(cfg)
     
     model = build_model(cfg)
@@ -169,25 +169,27 @@ def train(cfg : DictConfig) -> None:
 
     wandb_kwargs = OmegaConf.to_container(cfg.wandb, resolve=True)
 
+    output_dir = hydra.core.hydra_config.HydraConfig.get().runtime.output_dir
+
     if wandb_kwargs.pop("enabled", False):
-        logger = WandbLogger(
-            **wandb_kwargs
-            )
-        
+        logger = WandbLogger(**wandb_kwargs)
         cfg_dict = OmegaConf.to_container(cfg, resolve=True)
         logger.log_hyperparams(cfg_dict)
     else:
         logger = TensorBoardLogger(
-            save_dir=hydra.core.hydra_config.HydraConfig.get().runtime.output_dir,
-            name=f"{cfg.model.model_name}__{cfg.data.dataset}"
+            save_dir=output_dir,
+            name="tensorboard_logs",
+            version="",
         )
-    
+
     checkpoint_callback = ModelCheckpoint(
-        dirpath=f"./models/{current_time}/{cfg.model.model_name}",
+        dirpath=f"{output_dir}/checkpoints",
         filename="{epoch}-{valid_loss:.4f}-{valid_accuracy_PI@01:.4f}",
         monitor="valid_accuracy_PI@01",
         mode="max",
     )
+    
+
     trainer = L.Trainer(
         max_epochs=cfg.epochs,
         accumulate_grad_batches=cfg.accum_iter,
@@ -198,7 +200,7 @@ def train(cfg : DictConfig) -> None:
             checkpoint_callback,
         ],
         deterministic=True,
-        devices="auto", 
+        devices=1, 
         strategy="ddp",
         )
     
