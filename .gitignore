@@ -7,6 +7,7 @@ __pycache__
 /outputs/
 /models/
 /features/
+*_cache/
 /images/
 logs/
 !*.md
