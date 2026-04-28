@@ -1,15 +1,13 @@
 import numpy as np
 
 def random_rotate(skeleton, max_angle=15):
-    """データをランダムに回転させる"""
-    angle = np.random.uniform(-max_angle, max_angle)  # -max_angleからmax_angleまでランダムな角度
+    """Random Rotation."""
+    angle = np.random.uniform(-max_angle, max_angle)  
     radian = np.deg2rad(angle)
     
-    # 回転行列（2次元の回転、xy平面）
     rotation_matrix = np.array([[np.cos(radian), -np.sin(radian)],
                                 [np.sin(radian),  np.cos(radian)]])
     
-    # C, T, V, M の順に座標を回転
     rotated_skeleton = skeleton.copy()
     for t in range(skeleton.shape[1]):
         for v in range(skeleton.shape[2]):
@@ -18,16 +16,16 @@ def random_rotate(skeleton, max_angle=15):
     return rotated_skeleton
 
 def random_scale(skeleton, scale_range=(0.9, 1.1)):
-    """スケールをランダムに変更"""
+    """Random Scaling."""
     scale_factor = np.random.uniform(scale_range[0], scale_range[1])
     return skeleton * scale_factor
 
 def random_translate(skeleton, max_translation=0.1):
-    """ランダムに平行移動"""
+    """Random shifting."""
     translation = np.random.uniform(-max_translation, max_translation, size=(2,))
     translated_skeleton = skeleton.copy()
-    translated_skeleton[0, :, :, :] += translation[0]  # x方向
-    translated_skeleton[1, :, :, :] += translation[1]  # y方向
+    translated_skeleton[0, :, :, :] += translation[0]  # x-dim
+    translated_skeleton[1, :, :, :] += translation[1]  # y-dim
     return translated_skeleton
 
 def random_vertex_dropout(data, drop_rate):
@@ -69,7 +67,7 @@ def random_vertex_dropout(data, drop_rate):
     return augmented_data
 
 def augment_skeleton(skeleton, rotate=True, scale=True, translate=True,random_drop=True):
-    """スケルトンデータに複数のデータオーグメンテーションを適用"""
+    """Apply the augmentation for skeleton data."""
     augmented_skeleton = skeleton.copy()
     
     if rotate:
