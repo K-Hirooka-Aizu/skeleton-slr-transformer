@@ -58,7 +58,7 @@ python script/train.py data=wlasl1000 model=postnorm_transformer epochs=1500 see
 python script/train.py data=wlasl2000 model=postnorm_transformer epochs=1500 seed=42
 ```
 
-### Training and Evaluate the model with mulit-run.
+### Training and Evaluate the model with multi-run.
 ```bash
 # wlasl100
 python script/train.py -m data=wlasl100 model=postnorm_transformer epochs=1500 seed=0,1,2,3,4,5,6,7,8,9
