@@ -77,3 +77,16 @@ All model parameters and dataset configurations are managed via **Hydra YAML fil
 
 The full configuration hierarchy is available under the `scripts/conf/` directory.
 This setup enables reproducible experiments and flexible parameter control by editing configuration files or overriding them via the command line.
+
+## Feedback
+
+If you encounter any issues or unexpected behavior, please report them via GitHub Issues.
+
+To help us reproduce the problem, please include:
+
+* environment details (OS, GPU, CUDA, library versions)
+* the exact command/configuration used
+* error logs or stack traces
+
+We appreciate your feedback and will do our best to address reported issues.
+
