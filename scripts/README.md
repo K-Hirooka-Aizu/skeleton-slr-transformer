@@ -4,7 +4,7 @@
 ```bash
 python ./scripts/train.py \
         data=wlasl100 \ # (wlasl300, wlasl1000, wlasl2000, jsl0, ksl0)
-        model=transformer \ # (prenormtransformer, stgcn, ctrgcn)
+        model=postnorm_transformer \ # (prenorm_transformer, stgcn, ctrgcn)
         epochs=1500
 ```
 ### Hyperparameter

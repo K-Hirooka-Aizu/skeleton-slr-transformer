@@ -43,7 +43,7 @@ containerd-rootless-setuptool.sh install
 CONTAINERD_NAMESPACE=default containerd-rootless-setuptool.sh install-buildkit-containerd
 ```
 
-### Training the model
+### Training and Evaluate the model.
 ```bash
 # wlasl100
 python script/train.py data=wlasl100 model=postnorm_transformer epochs=1500 seed=42
@@ -54,3 +54,20 @@ python script/train.py data=wlasl1000 model=postnorm_transformer epochs=1500 see
 # wlasl2000
 python script/train.py data=wlasl2000 model=postnorm_transformer epochs=1500 seed=42
 ```
+
+### Training and Evaluate the model with mulit-run.
+```bash
+# wlasl100
+python script/train.py -m data=wlasl100 model=postnorm_transformer epochs=1500 seed=0,1,2,3,4,5,6,7,8,9
+# wlasl300
+python script/train.py data=wlasl300 model=postnorm_transformer epochs=1500 seed=0,1,2,3,4,5,6,7,8,9
+# wlasl1000
+python script/train.py data=wlasl1000 model=postnorm_transformer epochs=1500 seed=0,1,2,3,4,5,6,7,8,9
+# wlasl2000
+python script/train.py data=wlasl2000 model=postnorm_transformer epochs=1500 seed=0,1,2,3,4,5,6,7,8,9
+```
+
+All model parameters and dataset configurations are managed via **Hydra YAML files**.
+
+The full configuration hierarchy is available under the `scripts/conf/` directory.
+This setup enables reproducible experiments and flexible parameter control by editing configuration files or overriding them via the command line.
