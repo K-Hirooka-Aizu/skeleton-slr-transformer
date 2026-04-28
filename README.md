@@ -64,13 +64,13 @@ python script/train.py data=wlasl2000 model=postnorm_transformer epochs=1500 see
 python script/train.py -m data=wlasl100 model=postnorm_transformer epochs=1500 seed=0,1,2,3,4,5,6,7,8,9
 
 # wlasl300
-python script/train.py data=wlasl300 model=postnorm_transformer epochs=1500 seed=0,1,2,3,4,5,6,7,8,9
+python script/train.py -m data=wlasl300 model=postnorm_transformer epochs=1500 seed=0,1,2,3,4,5,6,7,8,9
 
 # wlasl1000
-python script/train.py data=wlasl1000 model=postnorm_transformer epochs=1500 seed=0,1,2,3,4,5,6,7,8,9
+python script/train.py -m data=wlasl1000 model=postnorm_transformer epochs=1500 seed=0,1,2,3,4,5,6,7,8,9
 
 # wlasl2000
-python script/train.py data=wlasl2000 model=postnorm_transformer epochs=1500 seed=0,1,2,3,4,5,6,7,8,9
+python script/train.py -m data=wlasl2000 model=postnorm_transformer epochs=1500 seed=0,1,2,3,4,5,6,7,8,9
 ```
 
 All model parameters and dataset configurations are managed via **Hydra YAML files**.
