@@ -1,0 +1,63 @@
+name: Reproduction Report
+description: Report issues related to reproducibility or unexpected results
+title: "[Repro] "
+labels: ["reproducibility", "bug"]
+
+body:
+  - type: textarea
+    id: issue
+    attributes:
+      label: 発生している問題 (Issue Description)
+      placeholder: どのような問題が発生しているかを説明してください
+    validations:
+      required: true
+
+  - type: textarea
+    id: result_gap
+    attributes:
+      label: 期待される結果 vs 実際の結果 (Expected vs Actual)
+      placeholder: |
+        Paper: XX.X%
+        Actual: XX.X%
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: 再現手順 (Steps to Reproduce)
+      placeholder: |
+        1. Download dataset ...
+        2. Run command: python train.py ...
+    validations:
+      required: true
+
+  - type: input
+    id: dataset
+    attributes:
+      label: Dataset
+      placeholder: e.g. WLASL100
+
+  - type: input
+    id: config
+    attributes:
+      label: Configuration (Hydra)
+      placeholder: e.g. data=wlasl100 model=postnorm_transformer seed=42
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: 実行環境 (Environment)
+      placeholder: |
+        OS: Ubuntu 20.04
+        Python: 3.9
+        PyTorch: 1.12.0
+        CUDA: 11.3 / RTX 3090
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: その他 (Additional Context)
+      placeholder: 補足情報や気づいた点があれば記載してください

@@ -1,0 +1,44 @@
+name: Bug Report
+description: Report a bug to help us improve the project
+title: "[BUG] "
+labels: ["bug"]
+
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      placeholder: Describe the issue clearly
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: To Reproduce
+      placeholder: |
+        1. Prepare dataset '...'
+        2. Run command '...'
+        3. See error
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      placeholder: |
+        OS: Ubuntu 20.04
+        Python: 3.9
+        PyTorch: 1.10.0
+        CUDA: 11.3 / RTX 3090
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / Screenshots

@@ -1,0 +1,27 @@
+name: Feature / Improvement
+description: Suggest a new feature or improvement to the project
+title: "[Feat] "
+labels: ["enhancement"]
+
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: 提案の概要 (Proposal Summary)
+      placeholder: 提案内容を簡潔に説明してください
+    validations:
+      required: true
+
+  - type: textarea
+    id: motivation
+    attributes:
+      label: 目的・メリット (Motivation)
+      placeholder: なぜこの提案が必要か、どのような利点があるかを説明してください
+    validations:
+      required: true
+
+  - type: textarea
+    id: implementation
+    attributes:
+      label: 実装イメージ (Implementation Plan)
+      placeholder: 実装方法や設計案があれば記述してください

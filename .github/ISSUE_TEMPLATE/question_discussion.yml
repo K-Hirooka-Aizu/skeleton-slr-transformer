@@ -1,0 +1,45 @@
+name: Question / Discussion
+description: Ask questions about implementation details or theoretical aspects
+title: "[Question] "
+labels: ["question", "discussion"]
+
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: 質問の概要 (Summary)
+      placeholder: 質問内容を簡潔に説明してください
+    validations:
+      required: true
+
+  - type: input
+    id: section
+    attributes:
+      label: 関連する論文の箇所 (Section)
+      placeholder: e.g. Section 3.2
+
+  - type: input
+    id: equation
+    attributes:
+      label: Equation
+      placeholder: e.g. Eq. (4)
+
+  - type: input
+    id: file
+    attributes:
+      label: 該当するコード (File)
+      placeholder: e.g. models/transformer.py
+
+  - type: input
+    id: lines
+    attributes:
+      label: Lines
+      placeholder: e.g. 45-50
+
+  - type: textarea
+    id: details
+    attributes:
+      label: 質問の詳細 (Details)
+      placeholder: 背景や試したことなど、詳細に記述してください
+    validations:
+      required: true
