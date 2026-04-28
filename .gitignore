@@ -1,0 +1,14 @@
+/data/*/
+__pycache__
+*.old
+/.vscode/
+
+.env
+
+/outputs/
+/models/
+/features/
+*_cache/
+/images/
+logs/
+!*.md

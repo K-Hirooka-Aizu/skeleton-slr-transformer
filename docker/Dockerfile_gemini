@@ -1,0 +1,37 @@
+# NVIDIA公式 CUDA + cuDNN ベース
+FROM nvidia/cuda:12.8.1-cudnn-devel-ubuntu24.04
+
+# タイムゾーン設定とパッケージ更新 (upgradeは削除)
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get install --no-install-recommends -y \
+        python3.10 \
+        curl \
+        wget \
+        sudo \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# 作業ディレクトリ
+WORKDIR /workspace
+
+# Miniforgeのバージョンを固定してインストール
+RUN curl -L -O "https://github.com/conda-forge/miniforge/releases/download/23.3.1-0/Miniforge3-Linux-x86_64.sh" \
+ && bash Miniforge3-Linux-x86_64.sh -b -p /root/conda \
+ && rm Miniforge3-Linux-x86_64.sh
+
+# conda のパスを通す
+ENV PATH=/root/conda/bin:$PATH
+
+# requirements.txtをコピーして、conda環境を作成・ライブラリをインストール
+COPY requirements.txt .
+RUN conda create -n pt271slr python=3.10 -y \
+ && echo "source /root/conda/bin/activate pt271slr" >> /root/.bashrc \
+ && /bin/bash -c "source /root/conda/bin/activate pt271slr && pip install -r requirements.txt"
+
+# デフォルトでconda環境が有効になるように設定
+ENV CONDA_DEFAULT_ENV pt271slr
+ENV CONDA_PROMPT_MODIFIER "(${CONDA_DEFAULT_ENV}) "
+SHELL ["/bin/bash", "--login", "-c"]
+# コンテナ起動時にconda activateが実行されるようにする
+RUN echo "conda activate pt271slr" >> /root/.bashrc
+
+CMD ["tail", "-f", "/dev/null"]

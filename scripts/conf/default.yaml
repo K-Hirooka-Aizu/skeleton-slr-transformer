@@ -1,0 +1,46 @@
+defaults:
+ - _self_
+ - data: wlasl100
+ - model: postnorm_transformer
+
+epochs: 500
+batch_size: 16
+label_smooting: 0.05
+accum_iter: 16
+gradient_clip: 10.0
+
+optim_type: adamw
+optim_args:
+    lr: 1.0e-3
+    momentum: 0.99
+    weight_decay: 0.01
+    betas: [0.9, 0.999]
+    eps: 1.0e-8
+
+scheduler_type: cosine
+scheduler_args:
+    min_lr: 1.0e-5
+    warmup_epoch: 5
+    warmup_lr_init: 1.0e-4
+
+seed: 42
+num_workers: 8
+pin_memory: true
+
+topk: [1,5,10]
+
+wandb:
+  enabled: true
+  project: exp-wlasl100
+  name: null
+  group: sweep_${now:%Y-%m-%d_%H-%M-%S}
+  save_dir: ${hydra:runtime.output_dir}
+  tags: []
+  reinit: true
+
+hydra:
+  run:
+    dir: ./outputs/${now:%Y-%m-%d}/${now:%H-%M-%S}
+  sweep:
+    dir: ./outputs/${now:%Y-%m-%d}/${now:%H-%M-%S}
+    subdir: ${hydra.job.num}

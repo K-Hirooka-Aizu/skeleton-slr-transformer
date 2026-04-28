@@ -1,0 +1,5 @@
+model_name: stgcn
+graph_args:
+  layout: wlasl_openpose
+  strategy: spatial
+edge_importance_weighting: true

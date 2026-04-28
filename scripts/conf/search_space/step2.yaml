@@ -1,0 +1,34 @@
+# Step 1: LRとWarmup Epochの探索
+epochs:
+  type: int
+  low: 10
+  high: 50
+
+# Step 2: 学習ハイパーパラメータの探索
+# --- Optimizer & Scheduler ---
+optim_args.lr:
+  type: float
+  low: 1.0e-5
+  high: 1.0e-3
+  log: true
+
+optim_args.weight_decay:
+  type: float
+  low: 1.0e-5
+  high: 1.0e-2
+  log: true
+
+scheduler_args.warmup_epoch:
+  type: int
+  low: 0
+  high: 10
+
+# 必要であれば Batch Size もここで探索
+# batch_size:
+#   type: categorical
+#   choices: [16, 32, 64]
+
+scheduler_args.warmup_epoch:
+  type: int
+  low: 1
+  high: 10

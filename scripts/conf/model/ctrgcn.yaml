@@ -1,0 +1,8 @@
+model_name: ctrgcn
+graph_args:
+  # layout: wlasl_openpose
+  layout: mmpose_coco_whole
+  # layout: mmpose_coco_whole_with_face
+  strategy: spatial
+drop_out: 0.0
+adaptive: false

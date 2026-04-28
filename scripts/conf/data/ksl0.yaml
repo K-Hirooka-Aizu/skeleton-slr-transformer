@@ -1,0 +1,16 @@
+dataset: ksl0
+dataset_dir_path: ./data/ksl0/skeleton_files
+split_ratio:
+  - 0.8
+  - 0.1
+  - 0.1
+num_classes: 31
+in_channels: 3
+seq_len: 32
+n_joints: 21
+num_copies: 4
+sampling_strategy:
+    train: seq
+    valid: seq
+    test: seq
+train_data_augmentation: true
