@@ -18,7 +18,7 @@ data/
 └──  README.md
 ```
 ## Dataset List
-- [WLASL](https://dxli94.github.io/WLASL/)
+- [WLASL](https://dxli94.github.io/WLASL/) Please visit official WLASL Github page. We used split config and keypoint data they provided.
     - [splits](https://drive.google.com/file/d/16CWkbMLyEbdBkrxAPaxSXFP_aSxKzNN4/view)
     - [body_keypoints](https://drive.google.com/file/d/1k5mfrc2g4ZEzzNjW6CEVjLvNTZcmPanB/view)
 - JSLv2 (Japanese Fingerspelling dataset)
