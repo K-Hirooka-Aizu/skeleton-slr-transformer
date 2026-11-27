@@ -1,5 +1,5 @@
 name: Reproduction Report
-description: Report issues related to reproducibility or unexpected results
+description: Report problems reproducing the results in the paper, or unexpected results
 title: "[Repro] "
 labels: ["reproducibility", "bug"]
 
@@ -7,15 +7,15 @@ body:
   - type: textarea
     id: issue
     attributes:
-      label: 発生している問題 (Issue Description)
-      placeholder: どのような問題が発生しているかを説明してください
+      label: Issue Description
+      placeholder: Describe the problem you are facing.
     validations:
       required: true
 
   - type: textarea
     id: result_gap
     attributes:
-      label: 期待される結果 vs 実際の結果 (Expected vs Actual)
+      label: Expected vs Actual
       placeholder: |
         Paper: XX.X%
         Actual: XX.X%
@@ -25,10 +25,10 @@ body:
   - type: textarea
     id: reproduce
     attributes:
-      label: 再現手順 (Steps to Reproduce)
+      label: Steps to Reproduce
       placeholder: |
         1. Download dataset ...
-        2. Run command: python train.py ...
+        2. Run command: python scripts/train.py ...
     validations:
       required: true
 
@@ -47,17 +47,17 @@ body:
   - type: textarea
     id: environment
     attributes:
-      label: 実行環境 (Environment)
+      label: Environment
       placeholder: |
-        OS: Ubuntu 20.04
-        Python: 3.9
-        PyTorch: 1.12.0
-        CUDA: 11.3 / RTX 3090
+        OS: Ubuntu 22.04
+        Python: 3.10
+        PyTorch: 2.7.1
+        CUDA: 12.8 / RTX 3090
     validations:
       required: true
 
   - type: textarea
     id: additional
     attributes:
-      label: その他 (Additional Context)
-      placeholder: 補足情報や気づいた点があれば記載してください
+      label: Additional Context (optional)
+      placeholder: Any other information or observations.

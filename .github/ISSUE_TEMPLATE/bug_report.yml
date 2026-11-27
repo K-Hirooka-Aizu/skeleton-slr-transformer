@@ -8,7 +8,7 @@ body:
     id: description
     attributes:
       label: Description
-      placeholder: Describe the issue clearly
+      placeholder: Describe the issue clearly.
     validations:
       required: true
 
@@ -18,7 +18,7 @@ body:
       label: To Reproduce
       placeholder: |
         1. Prepare dataset '...'
-        2. Run command '...'
+        2. Run command 'python scripts/train.py ...'
         3. See error
     validations:
       required: true
@@ -33,10 +33,10 @@ body:
     attributes:
       label: Environment
       placeholder: |
-        OS: Ubuntu 20.04
-        Python: 3.9
-        PyTorch: 1.10.0
-        CUDA: 11.3 / RTX 3090
+        OS: Ubuntu 22.04
+        Python: 3.10
+        PyTorch: 2.7.1
+        CUDA: 12.8 / RTX 3090
 
   - type: textarea
     id: logs

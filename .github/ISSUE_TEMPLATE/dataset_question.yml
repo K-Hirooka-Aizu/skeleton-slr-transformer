@@ -1,0 +1,51 @@
+name: Dataset / Data Usage
+description: Ask about the JSLv2 / KSL0 data (terms of use, file format, splits)
+title: "[Data] "
+labels: ["dataset", "question"]
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please check [data/README.md](https://github.com/K-Hirooka-Aizu/skeleton-slr-transformer/blob/main/data/README.md) and the "Datasets" section of the README first.
+        Please do not include personal information about the signers or yourself beyond what is needed.
+
+  - type: dropdown
+    id: dataset
+    attributes:
+      label: Dataset
+      options:
+        - KSL0 (Korean fingerspelling)
+        - JSLv2 (Japanese fingerspelling)
+        - WLASL
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: topic
+    attributes:
+      label: Topic
+      multiple: true
+      options:
+        - Terms of use / license
+        - File format / keypoints
+        - Class labels
+        - Splits
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: purpose
+    attributes:
+      label: Intended Use (for questions about terms of use)
+      placeholder: e.g. non-commercial training and evaluation for a university project
+
+  - type: textarea
+    id: details
+    attributes:
+      label: Details
+      placeholder: Describe your question.
+    validations:
+      required: true
