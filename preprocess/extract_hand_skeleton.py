@@ -1,3 +1,11 @@
+"""Extract MediaPipe hand keypoints from KSL0 videos (legacy script, kept for reference).
+
+NOTE: This is NOT the script that produced the released skeleton_files_ksl0.zip.
+It writes {"xyz": [...], "label": int} and flips each frame horizontally, whereas
+the released files are {"<frame number>": [[x, y, z] x 21]} dicts. See
+data/README.md for the format of the released data.
+"""
+
 import os
 from natsort import natsorted
 from shutil import rmtree
