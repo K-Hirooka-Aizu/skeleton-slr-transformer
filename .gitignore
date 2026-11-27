@@ -12,3 +12,4 @@ __pycache__
 /images/
 logs/
 !*.md
+.ipynb_checkpoints/
